@@ -1,9 +1,0 @@
-﻿{
-  "build": {
-    "builder": "DOCKERFILE"
-  },
-  "deploy": {
-    "startCommand": "php -S 0.0.0.0:8000 -t /app",
-    "restartPolicyType": "ON_FAILURE"
-  }
-}
