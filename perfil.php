@@ -89,6 +89,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_password'])) 
         }
     }
 }
+
+// Tipos de miembro
+$tipos_miembro = [
+    'general' => '🎓 Miembro General',
+    'estudiante' => '📚 Estudiante'
+];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -124,13 +130,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_password'])) 
         .tab.active { background: white; border-bottom: 2px solid #2c5aa0; font-weight: bold; color: #2c5aa0; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .password-strength { margin-top: 5px; font-size: 12px; }
-        .strength-weak { color: #dc3545; }
-        .strength-medium { color: #ffc107; }
-        .strength-strong { color: #28a745; }
-        .password-toggle { position: relative; }
-        .password-toggle input { padding-right: 40px; }
-        .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666; }
+        .tipo-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+        }
+        .tipo-general { background: #007bff; }
+        .tipo-estudiante { background: #28a745; }
+        .cuota-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
     </style>
 </head>
 <body>
@@ -178,6 +193,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_password'])) 
                                 <div class="value"><?php echo htmlspecialchars($usuario_actual['telefono'] ?? 'No registrado'); ?></div>
                             </div>
                             <div class="info-item">
+                                <div class="label">Tipo de Miembro</div>
+                                <div class="value">
+                                    <span class="tipo-badge tipo-<?php echo $usuario_actual['tipo_miembro']; ?>">
+                                        <?php 
+                                        if ($usuario_actual['tipo_miembro'] === 'estudiante') {
+                                            echo '📚 Estudiante';
+                                        } else {
+                                            echo '🎓 Miembro General';
+                                        }
+                                        ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
                                 <div class="label">Rol en el Club</div>
                                 <div class="value"><?php echo htmlspecialchars($usuario_actual['rol']); ?></div>
                             </div>
@@ -195,6 +224,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_password'])) 
                                 <div class="label">Miembro desde</div>
                                 <div class="value"><?php echo htmlspecialchars($usuario_actual['fecha_creacion'] ?? 'No registrada'); ?></div>
                             </div>
+                        </div>
+
+                        <!-- Información de cuotas según tipo de miembro -->
+                        <div class="cuota-info">
+                            <h4>💰 Información de Cuotas</h4>
+                            <p>
+                                <?php if ($usuario_actual['tipo_miembro'] === 'estudiante'): ?>
+                                    <strong>Tarifa Estudiantil:</strong> $3.000 CLP mensuales<br>
+                                    <small>Como estudiante, tienes un descuento especial en las cuotas del club.</small>
+                                <?php else: ?>
+                                    <strong>Tarifa General:</strong> $5.000 CLP mensuales<br>
+                                    <small>Tarifa estándar para miembros generales del club.</small>
+                                <?php endif; ?>
+                            </p>
+                            <p style="margin-top: 10px; font-size: 14px; color: #666;">
+                                💡 <em>El tipo de miembro puede ser actualizado por un administrador si cambia tu situación.</em>
+                            </p>
                         </div>
                     </div>
 

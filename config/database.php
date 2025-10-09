@@ -30,6 +30,7 @@ class Database {
                 contacto_emergencia_nombre TEXT,
                 contacto_emergencia_telefono TEXT,
                 contacto_emergencia_relacion TEXT,
+                tipo_miembro TEXT DEFAULT 'general', -- 'general' o 'estudiante'
                 rol TEXT DEFAULT 'miembro',
                 fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
                 estado TEXT DEFAULT 'activo'
@@ -129,14 +130,20 @@ class Database {
         }
 
         // Insertar usuario admin por defecto
-        $stmt = $this->conn->prepare("INSERT OR IGNORE INTO usuarios (email, password_hash, nombres, apellidos, rol) VALUES (?, ?, ?, ?, ?)");
-        $stmt->execute(['admin@clubmontana.cl', password_hash('admin123', PASSWORD_DEFAULT), 'Administrador', 'Sistema', 'admin']);
+        $stmt = $this->conn->prepare("INSERT OR IGNORE INTO usuarios (email, password_hash, nombres, apellidos, tipo_miembro, rol) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute(['admin@clubmontana.cl', password_hash('admin123', PASSWORD_DEFAULT), 'Administrador', 'Sistema', 'general', 'admin']);
         
         // Insertar usuario tesorero por defecto
-        $stmt->execute(['tesorero@clubmontana.cl', password_hash('tesorero123', PASSWORD_DEFAULT), 'Tesorero', 'Club', 'tesorero']);
+        $stmt->execute(['tesorero@clubmontana.cl', password_hash('tesorero123', PASSWORD_DEFAULT), 'Tesorero', 'Club', 'general', 'tesorero']);
         
         // Insertar usuario presidente por defecto
-        $stmt->execute(['presidente@clubmontana.cl', password_hash('presidente123', PASSWORD_DEFAULT), 'Presidente', 'Club', 'presidente']);
+        $stmt->execute(['presidente@clubmontana.cl', password_hash('presidente123', PASSWORD_DEFAULT), 'Presidente', 'Club', 'general', 'presidente']);
+        
+        // Insertar usuario estudiante de ejemplo
+        $stmt->execute(['estudiante@clubmontana.cl', password_hash('estudiante123', PASSWORD_DEFAULT), 'Juan', 'Estudiante', 'estudiante', 'miembro']);
+        
+        // Insertar usuario general de ejemplo
+        $stmt->execute(['general@clubmontana.cl', password_hash('general123', PASSWORD_DEFAULT), 'María', 'General', 'general', 'miembro']);
     }
 }
 ?>
