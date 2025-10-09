@@ -11,7 +11,6 @@ header('Content-Type: text/html; charset=utf-8');
         body { font-family: Arial, sans-serif; margin: 40px; background: #1e3d6f; color: white; }
         .container { max-width: 800px; margin: 0 auto; background: #2c5aa0; padding: 30px; border-radius: 10px; }
         .success { color: #90EE90; }
-        .error { color: #FFB6C1; }
     </style>
 </head>
 <body>
@@ -19,43 +18,39 @@ header('Content-Type: text/html; charset=utf-8');
         <h1>🏔️ Club de Montana Collipulli</h1>
         
         <?php
-        // Probar conexión a BD
         require_once 'config/database.php';
         $database = new Database();
         $db = $database->getConnection();
         
         if ($db) {
-            echo '<p class="success">✅ Conexión a BD exitosa</p>';
+            echo '<p class="success">✅ Sistema funcionando con SQLite</p>';
             
             // Verificar tablas
             try {
-                $stmt = $db->query("SHOW TABLES");
+                $stmt = $db->query("SELECT name FROM sqlite_master WHERE type='table'");
                 $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
                 
-                if (count($tables) > 0) {
-                    echo '<p class="success">✅ Tablas en BD: ' . count($tables) . '</p>';
-                } else {
-                    echo '<p class="error">⚠️ No hay tablas. Ejecuta el SQL en Adminer.</p>';
-                }
+                echo '<p>📊 Tablas en sistema: ' . count($tables) . '</p>';
+                
             } catch (Exception $e) {
-                echo '<p class="error">❌ Error al ver tablas: ' . $e->getMessage() . '</p>';
+                echo '<p>⚠️ Base de datos no instalada. <a href="install.php" style="color: #ffd700;">Instalar ahora</a></p>';
             }
-            
-        } else {
-            echo '<p class="error">❌ Error de conexión a BD</p>';
         }
         ?>
         
-        <p><strong>PHP Version:</strong> <?php echo phpversion(); ?></p>
-        
         <div style="margin-top: 30px;">
-            <h3>🚀 Sistema Base Listo</h3>
+            <h3>🚀 Módulos del Sistema:</h3>
             <ul>
                 <li><a href="login.php" style="color: #ffd700;">Sistema de Login</a></li>
-                <li><a href="adminer.php" style="color: #ffd700;">Adminer (Gestionar BD)</a></li>
-                <li><a href="api/test.php" style="color: #ffd700;">API Test</a></li>
+                <li><a href="install.php" style="color: #ffd700;">Instalador BD</a></li>
+                <li>Gestión de Miembros</li>
+                <li>Calendario de Eventos</li>
+                <li>Sistema de Reservas</li>
             </ul>
         </div>
+        
+        <p><strong>PHP Version:</strong> <?php echo phpversion(); ?></p>
+        <p><strong>Base de datos:</strong> SQLite ✅ Compatible</p>
     </div>
 </body>
 </html>
