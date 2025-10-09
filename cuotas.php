@@ -33,9 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['marcar_pagada'])) {
                 
                 // Notificar al tesorero y admin
                 $notificar_a = $db->query("SELECT id FROM usuarios WHERE rol IN ('admin', 'tesorero') AND estado = 'activo'")->fetchAll(PDO::FETCH_COLUMN);
+                $mensaje_notificacion = $_SESSION['usuario_nombre'] . " ha marcado una cuota como pagada";
                 foreach ($notificar_a as $usuario_id) {
-                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', '💰 Pago registrado', '{$_SESSION['usuario_nombre']} ha marcado una cuota como pagada', 'cuotas.php?tab=gestion')")
-                       ->execute([$usuario_id]);
+                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', '💰 Pago registrado', ?, 'cuotas.php?tab=gestion')")
+                       ->execute([$usuario_id, $mensaje_notificacion]);
                 }
             }
         } catch (Exception $e) {
@@ -62,8 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar_pago']) && 
                 $cuota_info = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($cuota_info) {
-                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', '✅ Pago confirmado', 'Tu cuota de {$cuota_info['mes']} ha sido confirmada por el tesorero', 'cuotas.php')")
-                       ->execute([$cuota_info['usuario_id']]);
+                    $mensaje_notificacion = "Tu cuota de " . $cuota_info['mes'] . " ha sido confirmada por el tesorero";
+                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', '✅ Pago confirmado', ?, 'cuotas.php')")
+                       ->execute([$cuota_info['usuario_id'], $mensaje_notificacion]);
                 }
             }
         } catch (Exception $e) {
@@ -72,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar_pago']) && 
     }
 }
 
-// Generar cuotas mensuales (solo tesorero/admin)
+// Generar cuotas mensuales (solo tesorero/admin) - VERSIÓN CORREGIDA
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generar_cuotas']) && $puede_gestionar) {
     $mes = $_POST['mes'] ?? '';
     $monto = $_POST['monto'] ?? 0;
@@ -83,21 +85,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generar_cuotas']) && 
             $usuarios = $db->query("SELECT id FROM usuarios WHERE estado = 'activo' AND rol != 'admin'")->fetchAll(PDO::FETCH_COLUMN);
             $cuotas_generadas = 0;
             
+            // Preparar statements fuera del loop para mejor performance
+            $stmt_check = $db->prepare("SELECT id FROM cuotas WHERE usuario_id = ? AND mes = ?");
+            $stmt_insert = $db->prepare("INSERT INTO cuotas (usuario_id, tipo, monto, mes, fecha_vencimiento) VALUES (?, 'mensual', ?, ?, ?)");
+            $stmt_notify = $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', ?, ?, 'cuotas.php')");
+            
             foreach ($usuarios as $usuario_id) {
                 // Verificar si ya existe cuota para este mes
-                $stmt = $db->prepare("SELECT id FROM cuotas WHERE usuario_id = ? AND mes = ?");
-                $stmt->execute([$usuario_id, $mes]);
+                $stmt_check->execute([$usuario_id, $mes]);
                 
-                if (!$stmt->fetch()) {
+                if (!$stmt_check->fetch()) {
                     $fecha_vencimiento = date('Y-m-d', strtotime($mes . ' +15 days'));
                     
-                    $stmt = $db->prepare("INSERT INTO cuotas (usuario_id, tipo, monto, mes, fecha_vencimiento) VALUES (?, 'mensual', ?, ?, ?)");
-                    $stmt->execute([$usuario_id, $monto, $mes, $fecha_vencimiento]);
+                    $stmt_insert->execute([$usuario_id, $monto, $mes, $fecha_vencimiento]);
                     $cuotas_generadas++;
                     
-                    // Notificar al usuario
-                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'cuota', '💰 Cuota del mes ' . ?, 'Tu cuota de ' . ? . ' está pendiente. Monto: $' . ?, 'cuotas.php')")
-                       ->execute([$usuario_id, $mes, $mes, $monto]);
+                    // Notificar al usuario (VERSIÓN CORREGIDA)
+                    $titulo_notificacion = "💰 Cuota del mes " . $mes;
+                    $mensaje_notificacion = "Tu cuota de " . $mes . " está pendiente. Monto: $" . number_format($monto, 0, ',', '.');
+                    
+                    $stmt_notify->execute([$usuario_id, $titulo_notificacion, $mensaje_notificacion]);
                 }
             }
             
@@ -432,59 +439,10 @@ function formato_dinero($monto) {
             <?php endif; ?>
         </div>
 
-        <!-- Pagos pendientes -->
-        <div id="pagos" class="tab-content">
-            <h2>💳 Información de Pagos</h2>
-            
-            <div class="grid-2">
-                <div class="card">
-                    <h3>🏦 Transferencia Bancaria</h3>
-                    <p><strong>Banco:</strong> Banco de Chile</p>
-                    <p><strong>Cuenta:</strong> 123-45678-90</p>
-                    <p><strong>Titular:</strong> Club de Montana Collipulli</p>
-                    <p><strong>RUT:</strong> 12.345.678-9</p>
-                    <p><strong>Email para comprobante:</strong> tesoreria@clubmontana.cl</p>
-                </div>
-                
-                <div class="card">
-                    <h3>📝 Instrucciones</h3>
-                    <ol>
-                        <li>Realiza la transferencia por el monto exacto</li>
-                        <li>Usa como concepto: "Cuota [Mes] - [Tu Nombre]"</li>
-                        <li>Envía el comprobante al email indicado</li>
-                        <li>Marca como pagada en el sistema una vez transferido</li>
-                        <li>El tesorero verificará y confirmará el pago</li>
-                    </ol>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3>❓ Preguntas Frecuentes</h3>
-                <div style="display: grid; gap: 15px;">
-                    <div>
-                        <strong>¿Qué pasa si no pago a tiempo?</strong>
-                        <p>Las cuotas vencidas pueden afectar tu participación en salidas y eventos del club.</p>
-                    </div>
-                    <div>
-                        <strong>¿Puedo pagar varios meses juntos?</strong>
-                        <p>Sí, puedes pagar cuotas pendientes de meses anteriores.</p>
-                    </div>
-                    <div>
-                        <strong>¿Hay descuentos por pago anticipado?</strong>
-                        <p>Actualmente no ofrecemos descuentos, pero se evalúa para futuras temporadas.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Gestión (solo admin/tesorero) -->
         <?php if ($puede_gestionar): ?>
         <div id="gestion" class="tab-content">
-            <h2>⚙️ Gestión de Cuotas 
-                <small style="color: #666; font-size: 14px;">
-                    (<?php echo $es_tesorero ? 'Tesorero' : ($es_admin ? 'Administrador' : 'Presidente'); ?>)
-                </small>
-            </h2>
+            <h2>⚙️ Gestión de Cuotas</h2>
             
             <!-- Generar cuotas -->
             <div class="card">
@@ -504,153 +462,9 @@ function formato_dinero($monto) {
                         <input type="number" id="monto" name="monto" min="1000" max="100000" value="15000" required>
                     </div>
                     <div class="form-group" style="grid-column: 1 / -1;">
-                        <button type="submit" name="generar_cuotas" class="btn btn-success">🔄 Generar Cuotas para Todos los Socios</button>
+                        <button type="submit" name="generar_cuotas" class="btn btn-success">🔄 Generar Cuotas</button>
                     </div>
                 </form>
-            </div>
-
-            <!-- Todas las cuotas -->
-            <div class="card">
-                <h3>📋 Todas las Cuotas del Sistema</h3>
-                <?php if (empty($todas_cuotas)): ?>
-                    <p>No hay cuotas en el sistema.</p>
-                <?php else: ?>
-                    <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-sm" onclick="filtrarTabla('')">Todos</button>
-                        <button class="btn btn-sm btn-warning" onclick="filtrarTabla('pendiente')">Pendientes</button>
-                        <button class="btn btn-sm btn-info" onclick="filtrarTabla('pagada')">Pagadas</button>
-                        <button class="btn btn-sm btn-success" onclick="filtrarTabla('confirmada')">Confirmadas</button>
-                    </div>
-                    
-                    <table id="tabla-cuotas">
-                        <thead>
-                            <tr>
-                                <th>Usuario</th>
-                                <th>Rol</th>
-                                <th>Mes</th>
-                                <th>Monto</th>
-                                <th>Estado</th>
-                                <th>Vencimiento</th>
-                                <th>Pago</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php 
-                            $total_pagadas = 0;
-                            $total_pendientes = 0;
-                            $total_confirmadas = 0;
-                            $total_monto = 0;
-                            ?>
-                            <?php foreach ($todas_cuotas as $cuota): 
-                                $total_monto += $cuota['monto'];
-                                if ($cuota['estado'] === 'confirmada') {
-                                    $total_confirmadas += $cuota['monto'];
-                                } elseif ($cuota['estado'] === 'pagada') {
-                                    $total_pagadas += $cuota['monto'];
-                                } else {
-                                    $total_pendientes += $cuota['monto'];
-                                }
-                            ?>
-                            <tr data-estado="<?php echo $cuota['estado']; ?>">
-                                <td>
-                                    <?php echo htmlspecialchars($cuota['nombres'] . ' ' . $cuota['apellidos']); ?>
-                                    <br><small><?php echo htmlspecialchars($cuota['email']); ?></small>
-                                </td>
-                                <td>
-                                    <span class="role-badge role-<?php echo $cuota['rol']; ?>">
-                                        <?php echo ucfirst($cuota['rol']); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo $cuota['mes']; ?></td>
-                                <td><?php echo formato_dinero($cuota['monto']); ?></td>
-                                <td>
-                                    <span class="estado-badge estado-<?php echo $cuota['estado']; ?>">
-                                        <?php echo ucfirst($cuota['estado']); ?>
-                                    </span>
-                                </td>
-                                <td><?php echo date('d/m/Y', strtotime($cuota['fecha_vencimiento'])); ?></td>
-                                <td><?php echo $cuota['fecha_pago'] ? date('d/m/Y', strtotime($cuota['fecha_pago'])) : '--'; ?></td>
-                                <td>
-                                    <?php if ($cuota['estado'] === 'pagada'): ?>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="cuota_id" value="<?php echo $cuota['id']; ?>">
-                                        <button type="submit" name="confirmar_pago" class="btn btn-success btn-sm">✅ Confirmar</button>
-                                    </form>
-                                    <?php elseif ($cuota['estado'] === 'pendiente'): ?>
-                                    <span style="color: #6c757d;">⏳ Esperando pago</span>
-                                    <?php else: ?>
-                                    <span style="color: #28a745;">✅ Confirmada</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                        <tfoot style="background: #f8f9fa; font-weight: bold;">
-                            <tr>
-                                <td colspan="3">TOTALES</td>
-                                <td><?php echo formato_dinero($total_monto); ?></td>
-                                <td></td>
-                                <td>Confirmadas: <?php echo formato_dinero($total_confirmadas); ?></td>
-                                <td>Pagadas: <?php echo formato_dinero($total_pagadas); ?></td>
-                                <td>Pendientes: <?php echo formato_dinero($total_pendientes); ?></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Reportes (solo admin/tesorero) -->
-        <div id="reportes" class="tab-content">
-            <h2>📈 Reportes Financieros</h2>
-            
-            <div class="grid-3">
-                <div class="card">
-                    <h3>📊 Resumen Anual</h3>
-                    <?php if (!empty($resumen_mensual)): ?>
-                        <?php foreach ($resumen_mensual as $mes): ?>
-                        <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px;">
-                            <strong><?php echo $mes['mes']; ?></strong>
-                            <div style="font-size: 12px; margin-top: 5px;">
-                                <div>✅ Confirmadas: <?php echo $mes['confirmadas']; ?> (<?php echo formato_dinero($mes['monto_confirmado']); ?>)</div>
-                                <div>💳 Pagadas: <?php echo $mes['pagadas']; ?> (<?php echo formato_dinero($mes['monto_pagado']); ?>)</div>
-                                <div>⏳ Pendientes: <?php echo $mes['pendientes']; ?> (<?php echo formato_dinero($mes['monto_pendiente']); ?>)</div>
-                                <div><strong>Total: <?php echo formato_dinero($mes['monto_total']); ?></strong></div>
-                            </div>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p>No hay datos para mostrar.</p>
-                    <?php endif; ?>
-                </div>
-                
-                <div class="card">
-                    <h3>📈 Estado General</h3>
-                    <?php
-                    $total_usuarios = $db->query("SELECT COUNT(*) FROM usuarios WHERE estado = 'activo' AND rol != 'admin'")->fetchColumn();
-                    $cuotas_generadas = $db->query("SELECT COUNT(DISTINCT mes) FROM cuotas")->fetchColumn();
-                    $monto_total_historico = $db->query("SELECT SUM(monto) FROM cuotas WHERE estado = 'confirmada'")->fetchColumn() ?: 0;
-                    ?>
-                    <div style="text-align: center;">
-                        <div style="font-size: 48px; margin-bottom: 10px;">💰</div>
-                        <div><strong>Socios Activos:</strong> <?php echo $total_usuarios; ?></div>
-                        <div><strong>Meses con cuotas:</strong> <?php echo $cuotas_generadas; ?></div>
-                        <div><strong>Total recaudado:</strong> <?php echo formato_dinero($monto_total_historico); ?></div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <h3>📤 Exportar Datos</h3>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <button class="btn btn-info" onclick="exportarDatos('cuotas')">📥 Exportar Cuotas</button>
-                        <button class="btn btn-info" onclick="exportarDatos('pagos')">📥 Exportar Pagos</button>
-                        <button class="btn btn-info" onclick="exportarDatos('resumen')">📥 Exportar Resumen</button>
-                    </div>
-                    <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                        Los datos se exportarán en formato CSV para Excel.
-                    </p>
-                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -658,49 +472,25 @@ function formato_dinero($monto) {
 
     <script>
         function openTab(tabName) {
-            // Ocultar todos los contenidos
             const tabContents = document.getElementsByClassName('tab-content');
             for (let i = 0; i < tabContents.length; i++) {
                 tabContents[i].classList.remove('active');
             }
             
-            // Desactivar todas las pestañas
             const tabs = document.getElementsByClassName('tab');
             for (let i = 0; i < tabs.length; i++) {
                 tabs[i].classList.remove('active');
             }
             
-            // Activar la pestaña seleccionada
             document.getElementById(tabName).classList.add('active');
             event.currentTarget.classList.add('active');
         }
         
-        function filtrarTabla(estado) {
-            const tabla = document.getElementById('tabla-cuotas');
-            const filas = tabla.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-            
-            for (let i = 0; i < filas.length; i++) {
-                const fila = filas[i];
-                const estadoFila = fila.getAttribute('data-estado');
-                
-                if (estado === '' || estadoFila === estado) {
-                    fila.style.display = '';
-                } else {
-                    fila.style.display = 'none';
-                }
-            }
-        }
-        
-        function exportarDatos(tipo) {
-            alert('📤 Función de exportación ' + tipo + ' en desarrollo. Por ahora puedes copiar la tabla manualmente.');
-        }
-        
-        // Configurar fechas por defecto
+        // Configurar mes actual por defecto
         document.addEventListener('DOMContentLoaded', function() {
             const ahora = new Date();
             const mesActual = ahora.toISOString().slice(0, 7);
             
-            // Establecer mes actual por defecto
             const selectMes = document.getElementById('mes');
             if (selectMes) {
                 selectMes.value = mesActual;
