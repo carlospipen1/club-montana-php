@@ -27,8 +27,8 @@ function generarPassword($longitud = 8) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Agregar nuevo usuario
     if (isset($_POST['agregar_usuario'])) {
-        // Agregar nuevo usuario
         $nombres = $_POST['nombres'] ?? '';
         $apellidos = $_POST['apellidos'] ?? '';
         $email = $_POST['email'] ?? '';
@@ -64,6 +64,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mensaje = "❌ Por favor completa todos los campos obligatorios";
         }
     }
+    
+    // Cambiar rol de usuario (solo admin)
+    if (isset($_POST['cambiar_rol']) && $_SESSION['usuario_rol'] === 'admin') {
+        $usuario_id = $_POST['usuario_id'] ?? '';
+        $nuevo_rol = $_POST['nuevo_rol'] ?? '';
+        
+        if (!empty($usuario_id) && !empty($nuevo_rol)) {
+            try {
+                // Obtener información del usuario antes del cambio
+                $stmt = $db->prepare("SELECT nombres, apellidos, rol FROM usuarios WHERE id = ?");
+                $stmt->execute([$usuario_id]);
+                $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($usuario) {
+                    $rol_anterior = $usuario['rol'];
+                    
+                    // Actualizar rol
+                    $stmt = $db->prepare("UPDATE usuarios SET rol = ? WHERE id = ?");
+                    $stmt->execute([$nuevo_rol, $usuario_id]);
+                    
+                    $mensaje = "✅ Rol de {$usuario['nombres']} {$usuario['apellidos']} cambiado de '$rol_anterior' a '$nuevo_rol'";
+                    
+                    // Notificar al administrador
+                    $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'sistema', '⚙️ Rol de usuario actualizado', 'Se cambió el rol de {$usuario['nombres']} {$usuario['apellidos']} de $rol_anterior a $nuevo_rol', 'socios.php')")
+                       ->execute([$_SESSION['usuario_id']]);
+                    
+                    // Notificar al usuario afectado (si no es a sí mismo)
+                    if ($usuario_id != $_SESSION['usuario_id']) {
+                        $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'sistema', '🎭 Tu rol ha cambiado', 'Tu rol en el sistema ha sido cambiado a: $nuevo_rol', 'perfil.php')")
+                           ->execute([$usuario_id]);
+                    }
+                }
+            } catch (Exception $e) {
+                $mensaje = "❌ Error al cambiar rol: " . $e->getMessage();
+            }
+        }
+    }
+    
+    // Cambiar estado de usuario (solo admin)
+    if (isset($_POST['cambiar_estado']) && $_SESSION['usuario_rol'] === 'admin') {
+        $usuario_id = $_POST['usuario_id'] ?? '';
+        $nuevo_estado = $_POST['nuevo_estado'] ?? '';
+        
+        if (!empty($usuario_id) && !empty($nuevo_estado)) {
+            try {
+                // Obtener información del usuario antes del cambio
+                $stmt = $db->prepare("SELECT nombres, apellidos, estado FROM usuarios WHERE id = ?");
+                $stmt->execute([$usuario_id]);
+                $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($usuario) {
+                    $estado_anterior = $usuario['estado'];
+                    
+                    // No permitir desactivarse a sí mismo
+                    if ($usuario_id == $_SESSION['usuario_id'] && $nuevo_estado == 'inactivo') {
+                        $mensaje = "❌ No puedes desactivar tu propia cuenta";
+                    } else {
+                        // Actualizar estado
+                        $stmt = $db->prepare("UPDATE usuarios SET estado = ? WHERE id = ?");
+                        $stmt->execute([$nuevo_estado, $usuario_id]);
+                        
+                        $mensaje = "✅ Estado de {$usuario['nombres']} {$usuario['apellidos']} cambiado de '$estado_anterior' a '$nuevo_estado'";
+                        
+                        // Notificar al administrador
+                        $db->prepare("INSERT INTO notificaciones (usuario_id, tipo, titulo, mensaje, enlace) VALUES (?, 'sistema', '🔔 Estado de usuario actualizado', 'Se cambió el estado de {$usuario['nombres']} {$usuario['apellidos']} de $estado_anterior a $nuevo_estado', 'socios.php')")
+                           ->execute([$_SESSION['usuario_id']]);
+                    }
+                }
+            } catch (Exception $e) {
+                $mensaje = "❌ Error al cambiar estado: " . $e->getMessage();
+            }
+        }
+    }
 }
 
 // Obtener lista de usuarios
@@ -74,6 +147,16 @@ try {
 } catch (Exception $e) {
     $mensaje = "Error al cargar usuarios: " . $e->getMessage();
 }
+
+// Definir roles disponibles
+$roles_disponibles = [
+    'miembro' => 'Miembro',
+    'encargado_equipo' => 'Encargado de Equipo', 
+    'comision_tecnica' => 'Comisión Técnica',
+    'secretario' => 'Secretario',
+    'presidente' => 'Presidente',
+    'admin' => 'Administrador'
+];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -83,18 +166,21 @@ try {
     <title>Gestión de Socios - Club de Montana</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background: #f8f9fa; font-weight: bold; }
-        .btn { display: inline-block; padding: 10px 20px; background: #2c5aa0; color: white; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; }
+        .btn { display: inline-block; padding: 8px 15px; background: #2c5aa0; color: white; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; font-size: 12px; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; }
         .btn-success { background: #28a745; }
+        .btn-warning { background: #ffc107; color: black; }
         .btn-danger { background: #dc3545; }
+        .btn-info { background: #17a2b8; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         .required::after { content: " *"; color: #dc3545; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         .mensaje { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -117,6 +203,47 @@ try {
             cursor: pointer;
             margin-left: 10px;
         }
+        .admin-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+        .role-badge { 
+            padding: 4px 8px; 
+            border-radius: 12px; 
+            font-size: 11px; 
+            font-weight: bold; 
+            color: white;
+            cursor: pointer;
+        }
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1000; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0,0,0,0.5); 
+        }
+        .modal-content { 
+            background-color: white; 
+            margin: 10% auto; 
+            padding: 20px; 
+            border-radius: 10px; 
+            width: 400px; 
+            max-width: 90%; 
+        }
+        .modal-header { 
+            display: flex; 
+            justify-content: between; 
+            align-items: center; 
+            margin-bottom: 15px; 
+        }
+        .close { 
+            color: #aaa; 
+            font-size: 24px; 
+            font-weight: bold; 
+            cursor: pointer; 
+        }
+        .close:hover { color: black; }
+        .user-highlight { background-color: #f0f8ff; }
     </style>
 </head>
 <body>
@@ -168,7 +295,10 @@ try {
 
         <div class="nav">
             <a href="#agregar">➕ Agregar Socio</a>
-            <a href="#lista">📋 Lista de Socios</a>
+            <a href="#lista">📋 Lista de Socios (<?php echo count($usuarios); ?>)</a>
+            <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
+            <a href="#admin-tools">⚙️ Herramientas de Administración</a>
+            <?php endif; ?>
         </div>
 
         <!-- Formulario para agregar usuario -->
@@ -205,12 +335,9 @@ try {
                     <div class="form-group">
                         <label for="rol">Rol</label>
                         <select id="rol" name="rol">
-                            <option value="miembro">Miembro</option>
-                            <option value="encargado_equipo">Encargado de Equipo</option>
-                            <option value="comision_tecnica">Comisión Técnica</option>
-                            <option value="secretario">Secretario</option>
-                            <option value="presidente">Presidente</option>
-                            <option value="admin">Administrador</option>
+                            <?php foreach ($roles_disponibles as $valor => $etiqueta): ?>
+                                <option value="<?php echo $valor; ?>"><?php echo $etiqueta; ?></option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                 </div>
@@ -229,7 +356,7 @@ try {
 
         <!-- Lista de usuarios -->
         <div class="card" id="lista">
-            <h2>📋 Lista de Socios (<?php echo count($usuarios); ?>)</h2>
+            <h2>📋 Lista de Socios</h2>
             
             <?php if (empty($usuarios)): ?>
                 <p>No hay socios registrados.</p>
@@ -245,11 +372,14 @@ try {
                             <th>Estado</th>
                             <th>Contacto Emergencia</th>
                             <th>Fecha Ingreso</th>
+                            <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
+                            <th>Acciones</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($usuarios as $usuario): ?>
-                        <tr>
+                        <tr class="<?php echo $usuario['id'] == $_SESSION['usuario_id'] ? 'user-highlight' : ''; ?>">
                             <td>
                                 <strong><?php echo htmlspecialchars($usuario['nombres'] . ' ' . $usuario['apellidos']); ?></strong>
                                 <?php if ($usuario['id'] == $_SESSION['usuario_id']): ?>
@@ -260,7 +390,7 @@ try {
                             <td><?php echo htmlspecialchars($usuario['telefono'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($usuario['rut'] ?? 'N/A'); ?></td>
                             <td>
-                                <span style="padding: 4px 8px; border-radius: 3px; background: 
+                                <span class="role-badge" style="background: 
                                     <?php echo match($usuario['rol']) {
                                         'admin' => '#dc3545',
                                         'presidente' => '#fd7e14', 
@@ -268,12 +398,23 @@ try {
                                         'encargado_equipo' => '#6f42c1',
                                         'comision_tecnica' => '#0dcaf0',
                                         default => '#6c757d'
-                                    }; ?>; color: white; font-size: 12px;">
+                                    }; ?>;"
+                                    <?php if ($_SESSION['usuario_rol'] === 'admin' && $usuario['id'] != $_SESSION['usuario_id']): ?>
+                                    onclick="abrirModalCambioRol(<?php echo $usuario['id']; ?>, '<?php echo $usuario['nombres'] . ' ' . $usuario['apellidos']; ?>', '<?php echo $usuario['rol']; ?>')"
+                                    title="Click para cambiar rol"
+                                    <?php endif; ?>
+                                    >
                                     <?php echo htmlspecialchars($usuario['rol']); ?>
                                 </span>
                             </td>
                             <td>
-                                <span style="color: <?php echo $usuario['estado'] === 'activo' ? 'green' : 'red'; ?>;">
+                                <span style="color: <?php echo $usuario['estado'] === 'activo' ? 'green' : 'red'; ?>;"
+                                    <?php if ($_SESSION['usuario_rol'] === 'admin' && $usuario['id'] != $_SESSION['usuario_id']): ?>
+                                    onclick="abrirModalCambioEstado(<?php echo $usuario['id']; ?>, '<?php echo $usuario['nombres'] . ' ' . $usuario['apellidos']; ?>', '<?php echo $usuario['estado']; ?>')"
+                                    title="Click para cambiar estado"
+                                    style="cursor: pointer;"
+                                    <?php endif; ?>
+                                    >
                                     ● <?php echo htmlspecialchars($usuario['estado']); ?>
                                 </span>
                             </td>
@@ -286,12 +427,182 @@ try {
                                 <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($usuario['fecha_ingreso'] ?? 'N/A'); ?></td>
+                            <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
+                            <td>
+                                <div class="admin-actions">
+                                    <button class="btn btn-sm btn-info" 
+                                            onclick="abrirModalCambioRol(<?php echo $usuario['id']; ?>, '<?php echo $usuario['nombres'] . ' ' . $usuario['apellidos']; ?>', '<?php echo $usuario['rol']; ?>')">
+                                        🎭 Rol
+                                    </button>
+                                    <?php if ($usuario['id'] != $_SESSION['usuario_id']): ?>
+                                    <button class="btn btn-sm btn-warning" 
+                                            onclick="abrirModalCambioEstado(<?php echo $usuario['id']; ?>, '<?php echo $usuario['nombres'] . ' ' . $usuario['apellidos']; ?>', '<?php echo $usuario['estado']; ?>')">
+                                        🔄 Estado
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             <?php endif; ?>
         </div>
+
+        <!-- Herramientas de administración -->
+        <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
+        <div class="card" id="admin-tools">
+            <h2>⚙️ Herramientas de Administración</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div style="background: #e7f3ff; padding: 20px; border-radius: 8px;">
+                    <h3>📊 Estadísticas de Usuarios</h3>
+                    <?php
+                    try {
+                        $total_usuarios = count($usuarios);
+                        $activos = array_filter($usuarios, fn($u) => $u['estado'] === 'activo');
+                        $inactivos = array_filter($usuarios, fn($u) => $u['estado'] === 'inactivo');
+                        
+                        $roles_count = [];
+                        foreach ($usuarios as $usuario) {
+                            $rol = $usuario['rol'];
+                            $roles_count[$rol] = ($roles_count[$rol] ?? 0) + 1;
+                        }
+                    ?>
+                    <p><strong>Total:</strong> <?php echo $total_usuarios; ?> usuarios</p>
+                    <p><strong>Activos:</strong> <?php echo count($activos); ?></p>
+                    <p><strong>Inactivos:</strong> <?php echo count($inactivos); ?></p>
+                    <div style="margin-top: 15px;">
+                        <strong>Distribución por Roles:</strong>
+                        <ul style="margin: 5px 0 0 0; font-size: 14px;">
+                            <?php foreach ($roles_count as $rol => $count): ?>
+                            <li><?php echo $roles_disponibles[$rol] ?? $rol; ?>: <?php echo $count; ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                    <?php } catch (Exception $e) { ?>
+                    <p>Error al cargar estadísticas</p>
+                    <?php } ?>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px;">
+                    <h3>🔧 Acciones Rápidas</h3>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <a href="config_pruebas.php" class="btn">🧪 Configurar Usuarios de Prueba</a>
+                        <button class="btn btn-info" onclick="exportarUsuarios()">📤 Exportar Lista de Usuarios</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
+
+    <!-- Modal para cambiar rol -->
+    <div id="modalRol" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎭 Cambiar Rol de Usuario</h3>
+                <span class="close" onclick="cerrarModal('modalRol')">&times;</span>
+            </div>
+            <form method="POST" id="formCambioRol">
+                <input type="hidden" name="usuario_id" id="usuario_id_rol">
+                <div class="form-group">
+                    <label>Usuario:</label>
+                    <p id="nombre_usuario_rol" style="font-weight: bold; margin: 5px 0;"></p>
+                </div>
+                <div class="form-group">
+                    <label for="nuevo_rol">Nuevo Rol:</label>
+                    <select name="nuevo_rol" id="nuevo_rol" required>
+                        <?php foreach ($roles_disponibles as $valor => $etiqueta): ?>
+                            <option value="<?php echo $valor; ?>"><?php echo $etiqueta; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" name="cambiar_rol" class="btn btn-success">💾 Cambiar Rol</button>
+                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalRol')">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para cambiar estado -->
+    <div id="modalEstado" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔄 Cambiar Estado de Usuario</h3>
+                <span class="close" onclick="cerrarModal('modalEstado')">&times;</span>
+            </div>
+            <form method="POST" id="formCambioEstado">
+                <input type="hidden" name="usuario_id" id="usuario_id_estado">
+                <div class="form-group">
+                    <label>Usuario:</label>
+                    <p id="nombre_usuario_estado" style="font-weight: bold; margin: 5px 0;"></p>
+                </div>
+                <div class="form-group">
+                    <label for="nuevo_estado">Nuevo Estado:</label>
+                    <select name="nuevo_estado" id="nuevo_estado" required>
+                        <option value="activo">Activo</option>
+                        <option value="inactivo">Inactivo</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" name="cambiar_estado" class="btn btn-success">💾 Cambiar Estado</button>
+                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalEstado')">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Funciones para los modales
+        function abrirModalCambioRol(usuarioId, nombreUsuario, rolActual) {
+            document.getElementById('usuario_id_rol').value = usuarioId;
+            document.getElementById('nombre_usuario_rol').textContent = nombreUsuario + ' (Rol actual: ' + rolActual + ')';
+            document.getElementById('nuevo_rol').value = rolActual;
+            document.getElementById('modalRol').style.display = 'block';
+        }
+
+        function abrirModalCambioEstado(usuarioId, nombreUsuario, estadoActual) {
+            document.getElementById('usuario_id_estado').value = usuarioId;
+            document.getElementById('nombre_usuario_estado').textContent = nombreUsuario + ' (Estado actual: ' + estadoActual + ')';
+            document.getElementById('nuevo_estado').value = estadoActual;
+            document.getElementById('modalEstado').style.display = 'block';
+        }
+
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Exportar usuarios (función de ejemplo)
+        function exportarUsuarios() {
+            alert('📤 Función de exportación en desarrollo. Por ahora puedes copiar la tabla manualmente.');
+        }
+
+        // Copiar contraseña
+        function copiarPassword() {
+            const passwordText = document.getElementById('passwordText');
+            const textArea = document.createElement('textarea');
+            textArea.value = passwordText.textContent;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copiada!';
+            setTimeout(() => {
+                btn.textContent = originalText;
+            }, 2000);
+        }
+    </script>
 </body>
 </html>
