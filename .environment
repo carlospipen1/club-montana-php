@@ -4,3 +4,4 @@ DB_NAME=railway
 DB_USER=root
 DB_PASS=AgCXOfUgCYYUCpHnQBLWwUhyapHWNvTT
 APP_ENV=production
+PORT=8000
