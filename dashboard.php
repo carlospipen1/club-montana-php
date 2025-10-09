@@ -24,14 +24,6 @@ $db = $database->getConnection();
             margin: 0;
             background: #f5f5f5;
         }
-        .header {
-            background: #1e3d6f;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -72,44 +64,10 @@ $db = $database->getConnection();
         .btn:hover {
             background: #1e3d6f;
         }
-        .logout {
-            color: white;
-            text-decoration: none;
-        }
-        .logout:hover {
-            text-decoration: underline;
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .profile-link {
-            color: #ffd700;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .profile-link:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🏔️ Club de Montana Collipulli</h1>
-        <div class="user-info">
-            <div>
-                <span>Hola, <?php echo htmlspecialchars($_SESSION['usuario_nombre']); ?></span>
-                <span style="margin: 0 10px;">|</span>
-                <span>Rol: <?php echo htmlspecialchars($_SESSION['usuario_rol']); ?></span>
-            </div>
-            <div style="margin-left: 20px;">
-                <a href="perfil.php" class="profile-link">👤 Mi Perfil</a>
-                <span style="margin: 0 15px; color: white;">|</span>
-                <a href="logout.php" class="logout">🚪 Cerrar Sesión</a>
-            </div>
-        </div>
-    </div>
+    <?php include 'includes/header.php'; ?>
 
     <div class="container">
         <div class="welcome">
