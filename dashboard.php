@@ -79,17 +79,35 @@ $db = $database->getConnection();
         .logout:hover {
             text-decoration: underline;
         }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .profile-link {
+            color: #ffd700;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .profile-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🏔️ Club de Montana Collipulli</h1>
-        <div>
-            <span>Hola, <?php echo htmlspecialchars($_SESSION['usuario_nombre']); ?></span>
-            <span style="margin: 0 15px;">|</span>
-            <span>Rol: <?php echo htmlspecialchars($_SESSION['usuario_rol']); ?></span>
-            <span style="margin: 0 15px;">|</span>
-            <a href="logout.php" class="logout">Cerrar Sesión</a>
+        <div class="user-info">
+            <div>
+                <span>Hola, <?php echo htmlspecialchars($_SESSION['usuario_nombre']); ?></span>
+                <span style="margin: 0 10px;">|</span>
+                <span>Rol: <?php echo htmlspecialchars($_SESSION['usuario_rol']); ?></span>
+            </div>
+            <div style="margin-left: 20px;">
+                <a href="perfil.php" class="profile-link">👤 Mi Perfil</a>
+                <span style="margin: 0 15px; color: white;">|</span>
+                <a href="logout.php" class="logout">🚪 Cerrar Sesión</a>
+            </div>
         </div>
     </div>
 
@@ -124,13 +142,67 @@ $db = $database->getConnection();
                 <a href="cuotas.php" class="btn">Acceder</a>
             </div>
 
-            <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
+            <?php if ($_SESSION['usuario_rol'] === 'admin' || $_SESSION['usuario_rol'] === 'presidente'): ?>
             <div class="module-card">
                 <h3>⚙️ Administración</h3>
                 <p>Configuración del sistema y usuarios.</p>
                 <a href="admin.php" class="btn">Acceder</a>
             </div>
             <?php endif; ?>
+
+            <div class="module-card">
+                <h3>📊 Mi Actividad</h3>
+                <p>Consulta tu historial y actividades.</p>
+                <a href="mi_actividad.php" class="btn">Acceder</a>
+            </div>
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <div style="margin-top: 30px;">
+            <div class="welcome">
+                <h3>📈 Resumen Rápido</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <div style="text-align: center; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #2c5aa0;">
+                            <?php
+                            try {
+                                $stmt = $db->query("SELECT COUNT(*) FROM usuarios WHERE estado = 'activo'");
+                                echo $stmt->fetchColumn();
+                            } catch (Exception $e) {
+                                echo "0";
+                            }
+                            ?>
+                        </div>
+                        <div>Socios Activos</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #e8f5e8; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #28a745;">
+                            <?php
+                            try {
+                                $stmt = $db->query("SELECT COUNT(*) FROM equipos WHERE estado = 'disponible'");
+                                echo $stmt->fetchColumn();
+                            } catch (Exception $e) {
+                                echo "0";
+                            }
+                            ?>
+                        </div>
+                        <div>Equipos Disponibles</div>
+                    </div>
+                    <div style="text-align: center; padding: 15px; background: #fff3cd; border-radius: 8px;">
+                        <div style="font-size: 24px; font-weight: bold; color: #ffc107;">
+                            <?php
+                            try {
+                                $stmt = $db->query("SELECT COUNT(*) FROM salidas WHERE estado = 'planificada'");
+                                echo $stmt->fetchColumn();
+                            } catch (Exception $e) {
+                                echo "0";
+                            }
+                            ?>
+                        </div>
+                        <div>Salidas Planificadas</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </body>
