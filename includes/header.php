@@ -3,6 +3,38 @@
 if (!isset($_SESSION)) {
     session_start();
 }
+
+// Cargar notificaciones si el usuario está logueado
+$num_notificaciones = 0;
+if (isset($_SESSION['usuario_id'])) {
+    try {
+        require_once 'config/database.php';
+        $database = new Database();
+        $db = $database->getConnection();
+        
+        if ($db) {
+            // Asegurar que la tabla existe
+            $db->exec("CREATE TABLE IF NOT EXISTS notificaciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                tipo TEXT NOT NULL,
+                titulo TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                enlace TEXT,
+                leida BOOLEAN DEFAULT 0,
+                fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+            
+            // Contar notificaciones no leídas
+            $stmt = $db->prepare("SELECT COUNT(*) FROM notificaciones WHERE usuario_id = ? AND leida = 0");
+            $stmt->execute([$_SESSION['usuario_id']]);
+            $num_notificaciones = $stmt->fetchColumn();
+        }
+    } catch (Exception $e) {
+        // Silenciar errores para no romper el header
+        error_log("Error en header: " . $e->getMessage());
+    }
+}
 ?>
 <header style="
     background: #1e3d6f; 
@@ -16,57 +48,61 @@ if (!isset($_SESSION)) {
     top: 0;
     z-index: 1000;
 ">
-    <!-- Logo y nombre del sistema -->
-    <div style="display: flex; align-items: center; gap: 15px;">
+    <!-- Logo -->
+    <div>
         <a href="dashboard.php" style="text-decoration: none; color: white; display: flex; align-items: center; gap: 10px;">
             <span style="font-size: 24px;">🏔️</span>
-            <h1 style="margin: 0; font-size: 20px; font-weight: bold;">Club Montana Collipulli</h1>
+            <h1 style="margin: 0; font-size: 20px; font-weight: bold;">Club Montana</h1>
         </a>
     </div>
 
     <!-- Información del usuario -->
     <div style="display: flex; align-items: center; gap: 20px;">
         <?php if (isset($_SESSION['usuario_id'])): ?>
-            <!-- Notificaciones (placeholder) -->
+            
+            <!-- NOTIFICACIONES SIMPLIFICADAS -->
             <div style="position: relative;">
-                <span style="font-size: 18px; cursor: pointer;">🔔</span>
-                <span style="
-                    position: absolute; 
-                    top: -5px; 
-                    right: -5px; 
-                    background: #ff4757; 
-                    color: white; 
-                    border-radius: 50%; 
-                    width: 16px; 
-                    height: 16px; 
-                    font-size: 10px; 
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center;
-                ">3</span>
+                <a href="notificaciones.php" style="color: white; text-decoration: none; font-size: 18px; position: relative;">
+                    🔔
+                    <?php if ($num_notificaciones > 0): ?>
+                    <span style="
+                        position: absolute; 
+                        top: -5px; 
+                        right: -5px; 
+                        background: #ff4757; 
+                        color: white; 
+                        border-radius: 50%; 
+                        width: 18px; 
+                        height: 18px; 
+                        font-size: 11px; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center;
+                        font-weight: bold;
+                    "><?php echo $num_notificaciones; ?></span>
+                    <?php endif; ?>
+                </a>
             </div>
 
             <!-- Información del usuario -->
-            <div style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.1); padding: 8px 15px; border-radius: 25px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="
-                    width: 35px; 
-                    height: 35px; 
+                    width: 40px; 
+                    height: 40px; 
                     background: #2c5aa0; 
                     border-radius: 50%; 
                     display: flex; 
                     align-items: center; 
                     justify-content: center;
                     font-weight: bold;
-                    font-size: 14px;
+                    border: 2px solid white;
                 ">
                     <?php 
                     $nombres = $_SESSION['usuario_nombre'] ?? '';
-                    $iniciales = '';
+                    $iniciales = 'U';
                     if (!empty($nombres)) {
                         $partes = explode(' ', $nombres);
-                        $iniciales = strtoupper(substr($partes[0], 0, 1) . (isset($partes[1]) ? substr($partes[1], 0, 1) : ''));
-                    } else {
-                        $iniciales = 'U';
+                        $iniciales = strtoupper(substr($partes[0], 0, 1) . (isset($partes[1]) ? substr($partes[1], 0, 1) : substr($partes[0], 1, 1)));
                     }
                     echo $iniciales;
                     ?>
@@ -74,27 +110,20 @@ if (!isset($_SESSION)) {
                 <div>
                     <div style="font-weight: bold; font-size: 14px;"><?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario'); ?></div>
                     <div style="font-size: 12px; opacity: 0.8;">
-                        <span style="
-                            background: rgba(255,255,255,0.2); 
-                            padding: 2px 8px; 
-                            border-radius: 10px; 
-                            font-size: 10px;
-                        ">
-                            <?php echo htmlspecialchars($_SESSION['usuario_rol'] ?? 'miembro'); ?>
-                        </span>
+                        <?php echo htmlspecialchars($_SESSION['usuario_rol'] ?? 'miembro'); ?>
                     </div>
                 </div>
             </div>
 
-            <!-- Menú desplegable -->
+            <!-- Menú simple -->
             <div style="position: relative;">
                 <button style="
                     background: none; 
                     border: none; 
                     color: white; 
-                    font-size: 18px; 
+                    font-size: 16px; 
                     cursor: pointer; 
-                    padding: 5px;
+                    padding: 5px 10px;
                 " onclick="toggleMenu()">▼</button>
                 
                 <div id="userMenu" style="
@@ -110,29 +139,10 @@ if (!isset($_SESSION)) {
                     z-index: 1001;
                     margin-top: 5px;
                 ">
-                    <a href="perfil.php" style="
-                        display: block; 
-                        padding: 12px 15px; 
-                        text-decoration: none; 
-                        color: #333; 
-                        border-bottom: 1px solid #eee;
-                        font-size: 14px;
-                    ">👤 Mi Perfil</a>
-                    <a href="dashboard.php" style="
-                        display: block; 
-                        padding: 12px 15px; 
-                        text-decoration: none; 
-                        color: #333; 
-                        border-bottom: 1px solid #eee;
-                        font-size: 14px;
-                    ">📊 Dashboard</a>
-                    <a href="logout.php" style="
-                        display: block; 
-                        padding: 12px 15px; 
-                        text-decoration: none; 
-                        color: #e74c3c; 
-                        font-size: 14px;
-                    ">🚪 Cerrar Sesión</a>
+                    <a href="perfil.php" style="display: block; padding: 12px 15px; text-decoration: none; color: #333; border-bottom: 1px solid #eee;">👤 Mi Perfil</a>
+                    <a href="dashboard.php" style="display: block; padding: 12px 15px; text-decoration: none; color: #333; border-bottom: 1px solid #eee;">📊 Dashboard</a>
+                    <a href="notificaciones.php" style="display: block; padding: 12px 15px; text-decoration: none; color: #333; border-bottom: 1px solid #eee;">🔔 Notificaciones</a>
+                    <a href="logout.php" style="display: block; padding: 12px 15px; text-decoration: none; color: #e74c3c;">🚪 Cerrar Sesión</a>
                 </div>
             </div>
 
@@ -154,7 +164,6 @@ if (!isset($_SESSION)) {
             </script>
 
         <?php else: ?>
-            <!-- Si no está logueado -->
             <a href="login.php" style="color: white; text-decoration: none; background: #2c5aa0; padding: 8px 15px; border-radius: 5px;">Iniciar Sesión</a>
         <?php endif; ?>
     </div>

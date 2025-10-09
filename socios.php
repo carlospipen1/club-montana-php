@@ -53,7 +53,6 @@ try {
     <title>Gestión de Socios - Club de Montana</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background: #f5f5f5; }
-        .header { background: #1e3d6f; color: white; padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .card { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -73,14 +72,7 @@ try {
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>👥 Gestión de Socios - Club de Montana</h1>
-        <div>
-            <a href="dashboard.php" style="color: white;">← Volver al Dashboard</a>
-            <span style="margin: 0 15px;">|</span>
-            <a href="logout.php" style="color: white;">Cerrar Sesión</a>
-        </div>
-    </div>
+    <?php include 'includes/header.php'; ?>
 
     <div class="container">
         <?php if ($mensaje): ?>
@@ -151,6 +143,7 @@ try {
                             <th>RUT</th>
                             <th>Rol</th>
                             <th>Estado</th>
+                            <th>Contacto Emergencia</th>
                             <th>Fecha Ingreso</th>
                         </tr>
                     </thead>
@@ -177,6 +170,14 @@ try {
                                 <span style="color: <?php echo $usuario['estado'] === 'activo' ? 'green' : 'red'; ?>;">
                                     ● <?php echo htmlspecialchars($usuario['estado']); ?>
                                 </span>
+                            </td>
+                            <td>
+                                <?php if (!empty($usuario['contacto_emergencia_nombre'])): ?>
+                                    <?php echo htmlspecialchars($usuario['contacto_emergencia_nombre']); ?><br>
+                                    <small><?php echo htmlspecialchars($usuario['contacto_emergencia_telefono']); ?></small>
+                                <?php else: ?>
+                                    <span style="color: #666;">No registrado</span>
+                                <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($usuario['fecha_ingreso'] ?? 'N/A'); ?></td>
                         </tr>
