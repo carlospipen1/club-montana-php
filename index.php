@@ -1,5 +1,12 @@
 ﻿<?php
+session_start();
 header('Content-Type: text/html; charset=utf-8');
+
+// Si ya está logueado, redirigir al dashboard
+if (isset($_SESSION['usuario_id'])) {
+    header('Location: dashboard.php');
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -11,6 +18,7 @@ header('Content-Type: text/html; charset=utf-8');
         body { font-family: Arial, sans-serif; margin: 40px; background: #1e3d6f; color: white; }
         .container { max-width: 800px; margin: 0 auto; background: #2c5aa0; padding: 30px; border-radius: 10px; }
         .success { color: #90EE90; }
+        .btn { display: inline-block; background: #4CAF50; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 10px 5px; }
     </style>
 </head>
 <body>
@@ -38,14 +46,20 @@ header('Content-Type: text/html; charset=utf-8');
         }
         ?>
         
+        <div style="margin-top: 30px; text-align: center;">
+            <h3>🚀 Acceso al Sistema</h3>
+            <a href="login.php" class="btn">🔐 Iniciar Sesión</a>
+            <a href="install.php" class="btn">🔧 Instalar BD</a>
+        </div>
+        
         <div style="margin-top: 30px;">
-            <h3>🚀 Módulos del Sistema:</h3>
+            <h3>📋 Módulos Disponibles:</h3>
             <ul>
-                <li><a href="login.php" style="color: #ffd700;">Sistema de Login</a></li>
-                <li><a href="install.php" style="color: #ffd700;">Instalador BD</a></li>
-                <li>Gestión de Miembros</li>
-                <li>Calendario de Eventos</li>
-                <li>Sistema de Reservas</li>
+                <li>Gestión de Socios</li>
+                <li>Control de Equipo</li>
+                <li>Salidas y Eventos</li>
+                <li>Sistema de Cuotas</li>
+                <li>Panel de Administración</li>
             </ul>
         </div>
         
