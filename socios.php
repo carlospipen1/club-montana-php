@@ -8,6 +8,9 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
+// Solo admin y presidente pueden agregar socios
+$puede_agregar_socios = ($_SESSION['usuario_rol'] === 'admin' || $_SESSION['usuario_rol'] === 'presidente');
+
 require_once 'config/database.php';
 $database = new Database();
 $db = $database->getConnection();
@@ -26,9 +29,53 @@ function generarPassword($longitud = 8) {
     return $password;
 }
 
+// Función para formatear RUT
+function formatearRUT($rut) {
+    if (empty($rut)) return '';
+    
+    // Eliminar puntos y guión
+    $rut = preg_replace('/[^0-9kK]/', '', $rut);
+    
+    if (strlen($rut) < 2) return $rut;
+    
+    // Separar número y dígito verificador
+    $cuerpo = substr($rut, 0, -1);
+    $dv = substr($rut, -1);
+    
+    // Formatear con puntos y guión
+    return number_format($cuerpo, 0, '', '.') . '-' . strtoupper($dv);
+}
+
+// Función para validar RUT
+function validarRUT($rut) {
+    if (empty($rut)) return true; // RUT opcional
+    
+    $rut = preg_replace('/[^0-9kK]/', '', $rut);
+    
+    if (strlen($rut) < 2) return false;
+    
+    $cuerpo = substr($rut, 0, -1);
+    $dv = strtoupper(substr($rut, -1));
+    
+    // Calcular dígito verificador
+    $suma = 0;
+    $multiplo = 2;
+    
+    for($i = strlen($cuerpo) - 1; $i >= 0; $i--) {
+        $suma += $multiplo * intval($cuerpo[$i]);
+        $multiplo = $multiplo < 7 ? $multiplo + 1 : 2;
+    }
+    
+    $dvEsperado = 11 - ($suma % 11);
+    if ($dvEsperado == 11) $dvEsperado = '0';
+    if ($dvEsperado == 10) $dvEsperado = 'K';
+    
+    return $dv == strval($dvEsperado);
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Agregar nuevo usuario
-    if (isset($_POST['agregar_usuario'])) {
+    // Agregar nuevo usuario (solo admin/presidente)
+    if (isset($_POST['agregar_usuario']) && $puede_agregar_socios) {
         $nombres = $_POST['nombres'] ?? '';
         $apellidos = $_POST['apellidos'] ?? '';
         $email = $_POST['email'] ?? '';
@@ -36,15 +83,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $tipo_miembro = $_POST['tipo_miembro'] ?? 'general';
         $rol = $_POST['rol'] ?? 'miembro';
         $telefono = $_POST['telefono'] ?? '';
+        $fecha_ingreso = $_POST['fecha_ingreso'] ?? '';
         
-        // Generar contraseña aleatoria
-        $password = generarPassword(8);
-        $password_generada = $password; // Guardar para mostrar
-        
-        if (!empty($nombres) && !empty($apellidos) && !empty($email)) {
+        // Validar RUT
+        if (!empty($rut) && !validarRUT($rut)) {
+            $mensaje = "❌ El RUT ingresado no es válido";
+        } elseif (!empty($email) && !empty($nombres) && !empty($apellidos)) {
+            // Generar contraseña aleatoria
+            $password = generarPassword(8);
+            $password_generada = $password;
+            
+            // Formatear RUT
+            $rut_formateado = formatearRUT($rut);
+            
             try {
-                $stmt = $db->prepare("INSERT INTO usuarios (nombres, apellidos, email, rut, telefono, tipo_miembro, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$nombres, $apellidos, $email, $rut, $telefono, $tipo_miembro, password_hash($password, PASSWORD_DEFAULT), $rol]);
+                $stmt = $db->prepare("INSERT INTO usuarios (nombres, apellidos, email, rut, telefono, tipo_miembro, fecha_ingreso, password_hash, rol) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$nombres, $apellidos, $email, $rut_formateado, $telefono, $tipo_miembro, $fecha_ingreso, password_hash($password, PASSWORD_DEFAULT), $rol]);
                 $mensaje = "✅ Usuario agregado correctamente";
                 
                 // Notificar al admin sobre nuevo usuario
@@ -59,12 +113,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $mensaje = "❌ Error al agregar usuario: " . $e->getMessage();
                 }
-                $password_generada = ''; // Limpiar password en caso de error
+                $password_generada = '';
             }
         } else {
             $mensaje = "❌ Por favor completa todos los campos obligatorios";
         }
     }
+    
+    // Resto del código para cambiar roles, tipos, estados (solo admin)
+    // ... (mantener el código existente para estas funciones)
     
     // Cambiar rol de usuario (solo admin)
     if (isset($_POST['cambiar_rol']) && $_SESSION['usuario_rol'] === 'admin') {
@@ -173,14 +230,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Obtener lista de usuarios
 $usuarios = [];
-try {
-    $stmt = $db->query("SELECT * FROM usuarios ORDER BY nombres, apellidos");
-    $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    $mensaje = "Error al cargar usuarios: " . $e->getMessage();
-}
-
-// Definir roles disponibles
 $roles_disponibles = [
     'miembro' => 'Miembro',
     'encargado_equipo' => 'Encargado de Equipo', 
@@ -196,6 +245,13 @@ $tipos_miembro = [
     'general' => '🎓 Miembro General ($5.000)',
     'estudiante' => '📚 Estudiante ($3.000)'
 ];
+
+try {
+    $stmt = $db->query("SELECT * FROM usuarios ORDER BY nombres, apellidos");
+    $usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $mensaje = "Error al cargar usuarios: " . $e->getMessage();
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -219,7 +275,7 @@ $tipos_miembro = [
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         .required::after { content: " *"; color: #dc3545; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
         .mensaje { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -294,6 +350,13 @@ $tipos_miembro = [
         .close:hover { color: black; }
         .user-highlight { background-color: #f0f8ff; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .restricted-section { 
+            background: #fff3cd; 
+            padding: 20px; 
+            border-radius: 8px; 
+            border-left: 4px solid #ffc107;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -325,14 +388,17 @@ $tipos_miembro = [
         <?php endif; ?>
 
         <div class="nav">
+            <?php if ($puede_agregar_socios): ?>
             <a href="#agregar">➕ Agregar Socio</a>
+            <?php endif; ?>
             <a href="#lista">📋 Lista de Socios (<?php echo count($usuarios); ?>)</a>
             <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
             <a href="#admin-tools">⚙️ Herramientas de Administración</a>
             <?php endif; ?>
         </div>
 
-        <!-- Formulario para agregar usuario -->
+        <!-- Formulario para agregar usuario (solo admin/presidente) -->
+        <?php if ($puede_agregar_socios): ?>
         <div class="card" id="agregar">
             <h2>➕ Agregar Nuevo Socio</h2>
             <form method="POST">
@@ -354,7 +420,8 @@ $tipos_miembro = [
                     </div>
                     <div class="form-group">
                         <label for="rut">RUT</label>
-                        <input type="text" id="rut" name="rut" placeholder="12.345.678-9">
+                        <input type="text" id="rut" name="rut" placeholder="12345678-9" onblur="formatearRUTInput(this)">
+                        <small style="color: #666;">Formato: 12345678-9 (con guión)</small>
                     </div>
                 </div>
 
@@ -364,6 +431,13 @@ $tipos_miembro = [
                         <input type="tel" id="telefono" name="telefono" placeholder="+56 9 1234 5678">
                     </div>
                     <div class="form-group">
+                        <label for="fecha_ingreso">Fecha de Ingreso al Club</label>
+                        <input type="date" id="fecha_ingreso" name="fecha_ingreso" value="<?php echo date('Y-m-d'); ?>">
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
                         <label for="tipo_miembro">Tipo de Miembro</label>
                         <select id="tipo_miembro" name="tipo_miembro">
                             <?php foreach ($tipos_miembro as $valor => $etiqueta): ?>
@@ -371,15 +445,14 @@ $tipos_miembro = [
                             <?php endforeach; ?>
                         </select>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="rol">Rol</label>
-                    <select id="rol" name="rol">
-                        <?php foreach ($roles_disponibles as $valor => $etiqueta): ?>
-                            <option value="<?php echo $valor; ?>"><?php echo $etiqueta; ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="form-group">
+                        <label for="rol">Rol</label>
+                        <select id="rol" name="rol">
+                            <?php foreach ($roles_disponibles as $valor => $etiqueta): ?>
+                                <option value="<?php echo $valor; ?>"><?php echo $etiqueta; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
 
                 <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #ffc107;">
@@ -393,6 +466,14 @@ $tipos_miembro = [
                 <button type="submit" name="agregar_usuario" class="btn btn-success">➕ Crear Usuario</button>
             </form>
         </div>
+        <?php else: ?>
+        <div class="restricted-section" id="agregar">
+            <h3>🚫 Acceso Restringido</h3>
+            <p>No tienes permisos para agregar nuevos socios.</p>
+            <p>Esta función está disponible solo para <strong>Administradores</strong> y <strong>Presidentes</strong> del club.</p>
+            <p>Si necesitas agregar un nuevo socio, contacta al administrador del sistema.</p>
+        </div>
+        <?php endif; ?>
 
         <!-- Lista de usuarios -->
         <div class="card" id="lista">
@@ -406,11 +487,11 @@ $tipos_miembro = [
                         <tr>
                             <th>Nombre</th>
                             <th>Email</th>
+                            <th>RUT</th>
                             <th>Teléfono</th>
                             <th>Tipo Miembro</th>
                             <th>Rol</th>
                             <th>Estado</th>
-                            <th>Contacto Emergencia</th>
                             <th>Fecha Ingreso</th>
                             <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
                             <th>Acciones</th>
@@ -427,6 +508,7 @@ $tipos_miembro = [
                                 <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($usuario['email']); ?></td>
+                            <td><?php echo htmlspecialchars($usuario['rut'] ?? 'N/A'); ?></td>
                             <td><?php echo htmlspecialchars($usuario['telefono'] ?? 'N/A'); ?></td>
                             <td>
                                 <span class="tipo-badge tipo-<?php echo $usuario['tipo_miembro']; ?>"
@@ -473,14 +555,6 @@ $tipos_miembro = [
                                     >
                                     ● <?php echo htmlspecialchars($usuario['estado']); ?>
                                 </span>
-                            </td>
-                            <td>
-                                <?php if (!empty($usuario['contacto_emergencia_nombre'])): ?>
-                                    <?php echo htmlspecialchars($usuario['contacto_emergencia_nombre']); ?><br>
-                                    <small><?php echo htmlspecialchars($usuario['contacto_emergencia_telefono']); ?></small>
-                                <?php else: ?>
-                                    <span style="color: #666;">No registrado</span>
-                                <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($usuario['fecha_ingreso'] ?? 'N/A'); ?></td>
                             <?php if ($_SESSION['usuario_rol'] === 'admin'): ?>
@@ -647,6 +721,59 @@ $tipos_miembro = [
             setTimeout(() => {
                 btn.textContent = originalText;
             }, 2000);
+        }
+
+        // Función para formatear RUT automáticamente
+        function formatearRUTInput(input) {
+            let rut = input.value.replace(/[^0-9kK]/g, '');
+            
+            if (rut.length < 2) return;
+            
+            let cuerpo = rut.slice(0, -1);
+            let dv = rut.slice(-1).toUpperCase();
+            
+            // Formatear con puntos
+            cuerpo = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            input.value = cuerpo + '-' + dv;
+        }
+
+        // Validar RUT antes de enviar el formulario
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const rutInput = document.getElementById('rut');
+            if (rutInput.value.trim() !== '') {
+                const rut = rutInput.value.replace(/[^0-9kK]/g, '');
+                if (rut.length < 2 || !validarRUT(rut)) {
+                    e.preventDefault();
+                    alert('❌ El RUT ingresado no es válido. Por favor verifica el formato (ej: 12345678-9).');
+                    rutInput.focus();
+                    return false;
+                }
+            }
+        });
+
+        // Función para validar RUT en JavaScript
+        function validarRUT(rut) {
+            if (!rut || rut.length < 2) return false;
+            
+            const rutLimpio = rut.replace(/[^0-9kK]/g, '');
+            const cuerpo = rutLimpio.slice(0, -1);
+            const dv = rutLimpio.slice(-1).toUpperCase();
+
+            if (cuerpo.length < 7) return false;
+
+            let suma = 0;
+            let multiplo = 2;
+
+            for (let i = cuerpo.length - 1; i >= 0; i--) {
+                suma += multiplo * parseInt(cuerpo[i]);
+                multiplo = multiplo < 7 ? multiplo + 1 : 2;
+            }
+
+            const dvEsperado = 11 - (suma % 11);
+            let dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+
+            return dv === dvCalculado;
         }
     </script>
 </body>
