@@ -17,7 +17,7 @@ $db = $database->getConnection();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Club de Montana</title>
+    <title>Inicio - Club de Montana</title>
     <style>
         body { 
             font-family: Arial, sans-serif; 
@@ -191,39 +191,39 @@ $db = $database->getConnection();
             <div class="module-card">
                 <h3>👥 Gestión de Socios</h3>
                 <p>Administra la información de los miembros del club, roles y contactos de emergencia.</p>
-                <a href="socios.php" class="btn">Acceder al Módulo</a>
+                <a href="socios.php" class="btn">Ir a Gestion de Socios</a>
             </div>
 
             <div class="module-card">
                 <h3>🎒 Gestión de Equipo</h3>
                 <p>Control de inventario, préstamos y estados de disponibilidad del equipo del club.</p>
-                <a href="equipos.php" class="btn">Acceder al Módulo</a>
+                <a href="equipos.php" class="btn">Ir a Gestión de Equipo</a>
             </div>
 
             <div class="module-card">
                 <h3>🏔️ Salidas y Eventos</h3>
                 <p>Organiza y gestiona las salidas del club, inscripciones y control de asistencia.</p>
-                <a href="salidas.php" class="btn">Próximamente</a>
+                <a href="salidas.php" class="btn">Ir a Salidas y Eventos</a>
             </div>
 
             <div class="module-card">
                 <h3>💰 Sistema de Cuotas</h3>
                 <p>Control de pagos mensuales, estados de cuenta y recordatorios automáticos.</p>
-                <a href="cuotas.php" class="btn">Próximamente</a>
+                <a href="cuotas.php" class="btn">Ir a Sistema de Cuotas</a>
             </div>
 
             <?php if ($_SESSION['usuario_rol'] === 'admin' || $_SESSION['usuario_rol'] === 'presidente'): ?>
             <div class="module-card">
                 <h3>⚙️ Administración</h3>
                 <p>Configuración del sistema, usuarios avanzados y reportes del club.</p>
-                <a href="admin.php" class="btn">Próximamente</a>
+                <a href="admin.php" class="btn">Ir a Administración</a>
             </div>
             <?php endif; ?>
 
             <div class="module-card">
                 <h3>📊 Mi Actividad</h3>
                 <p>Consulta tu historial personal, préstamos y participación en actividades.</p>
-                <a href="mi_actividad.php" class="btn">Próximamente</a>
+                <a href="mi_actividad.php" class="btn">Ir a Mi Actividad</a>
             </div>
         </div>
 
