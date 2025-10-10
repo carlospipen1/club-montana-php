@@ -1,5 +1,4 @@
-﻿[file name]: cuotas.php
-[file content begin]
+﻿
 ﻿<?php
 session_start();
 header('Content-Type: text/html; charset=utf-8');
@@ -734,4 +733,3 @@ function formato_dinero($monto) {
     </script>
 </body>
 </html>
-[file content end]
