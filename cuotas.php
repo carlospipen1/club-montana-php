@@ -1,3 +1,5 @@
+﻿[file name]: cuotas.php
+[file content begin]
 ﻿<?php
 session_start();
 header('Content-Type: text/html; charset=utf-8');
@@ -132,11 +134,11 @@ try {
 
 // Obtener año seleccionado (por defecto el año actual)
 $año_seleccionado = $_GET['año'] ?? $ano_actual;
-if (!in_array($año_seleccionado, array_column($anos_habilitados, 'año'))) {
-    $año_seleccionado = $ano_actual;
+if (!empty($anos_habilitados) && !in_array($año_seleccionado, array_column($anos_habilitados, 'año'))) {
+    $año_seleccionado = $anos_habilitados[0]['año'] ?? $ano_actual;
 }
 
-// Obtener cuotas del año seleccionado
+// Obtener cuotas del año seleccionado - SIEMPRE cargar para mostrar en registro
 $cuotas_año = [];
 $resumen_año = [
     'total_usuarios' => 0,
@@ -150,42 +152,40 @@ $resumen_año = [
 $mis_cuotas = [];
 
 try {
-    // Obtener cuotas del año seleccionado
-    if ($puede_gestionar) {
-        $stmt = $db->prepare("
-            SELECT 
-                cm.*,
-                u.nombres,
-                u.apellidos,
-                u.email,
-                u.tipo_miembro
-            FROM cuotas_mensuales cm
-            JOIN usuarios u ON cm.usuario_id = u.id
-            WHERE cm.año = ?
-            ORDER BY u.apellidos, u.nombres, cm.mes
-        ");
+    // Obtener cuotas del año seleccionado - SIEMPRE para tesoreros/admins
+    $stmt = $db->prepare("
+        SELECT 
+            cm.*,
+            u.nombres,
+            u.apellidos,
+            u.email,
+            u.tipo_miembro
+        FROM cuotas_mensuales cm
+        JOIN usuarios u ON cm.usuario_id = u.id
+        WHERE cm.año = ?
+        ORDER BY u.apellidos, u.nombres, cm.mes
+    ");
+    $stmt->execute([$año_seleccionado]);
+    $cuotas_año = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Si no hay cuotas pero el año está habilitado, mostrar mensaje
+    if (empty($cuotas_año)) {
+        $stmt = $db->prepare("SELECT id FROM cuotas_anuales WHERE año = ?");
         $stmt->execute([$año_seleccionado]);
-        $cuotas_año = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Si no hay cuotas pero el año está habilitado, mostrar mensaje
-        if (empty($cuotas_año)) {
-            $stmt = $db->prepare("SELECT id FROM cuotas_anuales WHERE año = ?");
-            $stmt->execute([$año_seleccionado]);
-            if ($stmt->fetch()) {
-                $mensaje = "ℹ️ El año $año_seleccionado está habilitado pero no hay cuotas creadas. Ve a la pestaña Gestión y haz click en 'Habilitar Año' nuevamente.";
-            }
+        if ($stmt->fetch()) {
+            $mensaje = "ℹ️ El año $año_seleccionado está habilitado pero no hay cuotas creadas. Ve a la pestaña Gestión y haz click en 'Habilitar Año' nuevamente.";
         }
-        
-        // Calcular resumen
-        if (!empty($cuotas_año)) {
-            $usuarios_unicos = array_unique(array_column($cuotas_año, 'usuario_id'));
-            $resumen_año['total_usuarios'] = count($usuarios_unicos);
-            $resumen_año['total_meses'] = count($cuotas_año);
-            $resumen_año['total_esperado'] = array_sum(array_column($cuotas_año, 'monto_esperado'));
-            $resumen_año['total_pagado'] = array_sum(array_column($cuotas_año, 'monto_pagado'));
-            $resumen_año['porcentaje_pagado'] = $resumen_año['total_esperado'] > 0 ? 
-                ($resumen_año['total_pagado'] / $resumen_año['total_esperado']) * 100 : 0;
-        }
+    }
+    
+    // Calcular resumen
+    if (!empty($cuotas_año)) {
+        $usuarios_unicos = array_unique(array_column($cuotas_año, 'usuario_id'));
+        $resumen_año['total_usuarios'] = count($usuarios_unicos);
+        $resumen_año['total_meses'] = count($cuotas_año);
+        $resumen_año['total_esperado'] = array_sum(array_column($cuotas_año, 'monto_esperado'));
+        $resumen_año['total_pagado'] = array_sum(array_column($cuotas_año, 'monto_pagado'));
+        $resumen_año['porcentaje_pagado'] = $resumen_año['total_esperado'] > 0 ? 
+            ($resumen_año['total_pagado'] / $resumen_año['total_esperado']) * 100 : 0;
     }
     
     // Obtener mis cuotas (para usuarios normales)
@@ -530,12 +530,123 @@ function formato_dinero($monto) {
                 </div>
             <?php else: ?>
                 <div class="card">
-                    <p>La tabla de registro de pagos aparecerá aquí cuando las cuotas estén creadas.</p>
-                    <p>Después de habilitar el año, recarga esta página para ver la tabla.</p>
+                    <h3>👥 Cuotas del Año <?php echo $año_seleccionado; ?></h3>
+                    <p>Total de cuotas: <?php echo count($cuotas_año); ?> | 
+                       Socios: <?php echo $resumen_año['total_usuarios']; ?> | 
+                       Recaudado: <?php echo number_format($resumen_año['porcentaje_pagado'], 1); ?>%
+                    </p>
+                    
+                    <div class="scrollable-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Tipo</th>
+                                    <?php for ($mes = 1; $mes <= 12; $mes++): ?>
+                                    <th class="cuota-mes"><?php echo substr($meses_nombres[$mes], 0, 3); ?></th>
+                                    <?php endfor; ?>
+                                    <th>Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $usuarios_agrupados = [];
+                                foreach ($cuotas_año as $cuota) {
+                                    $usuarios_agrupados[$cuota['usuario_id']][] = $cuota;
+                                }
+                                
+                                foreach ($usuarios_agrupados as $usuario_id => $cuotas_usuario): 
+                                    $total_usuario_esperado = 0;
+                                    $total_usuario_pagado = 0;
+                                    $cuotas_por_mes = [];
+                                    
+                                    foreach ($cuotas_usuario as $cuota) {
+                                        $cuotas_por_mes[$cuota['mes']] = $cuota;
+                                        $total_usuario_esperado += $cuota['monto_esperado'];
+                                        $total_usuario_pagado += $cuota['monto_pagado'];
+                                    }
+                                ?>
+                                <tr class="usuario-fila">
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($cuotas_usuario[0]['nombres'] . ' ' . $cuotas_usuario[0]['apellidos']); ?></strong><br>
+                                        <small><?php echo htmlspecialchars($cuotas_usuario[0]['email']); ?></small>
+                                    </td>
+                                    <td>
+                                        <span class="tipo-badge tipo-<?php echo $cuotas_usuario[0]['tipo_miembro']; ?>">
+                                            <?php echo $cuotas_usuario[0]['tipo_miembro'] === 'estudiante' ? '📚' : '🎓'; ?>
+                                        </span>
+                                    </td>
+                                    <?php for ($mes = 1; $mes <= 12; $mes++): 
+                                        $cuota_mes = $cuotas_por_mes[$mes] ?? null;
+                                    ?>
+                                    <td class="cuota-mes <?php echo $cuota_mes ? 'cuota-' . $cuota_mes['estado'] : ''; ?>">
+                                        <?php if ($cuota_mes): ?>
+                                            <div style="font-size: 11px;">
+                                                <strong><?php echo formato_dinero($cuota_mes['monto_pagado']); ?></strong><br>
+                                                <small>/<?php echo formato_dinero($cuota_mes['monto_esperado']); ?></small>
+                                            </div>
+                                            <span class="estado-badge estado-<?php echo $cuota_mes['estado']; ?>" style="font-size: 9px; padding: 2px 4px;">
+                                                <?php echo substr(ucfirst($cuota_mes['estado']), 0, 1); ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="color: #ccc;">--</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php endfor; ?>
+                                    <td>
+                                        <strong><?php echo formato_dinero($total_usuario_pagado); ?></strong><br>
+                                        <small>/<?php echo formato_dinero($total_usuario_esperado); ?></small>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" onclick="registrarPago(<?php echo $usuario_id; ?>, '<?php echo htmlspecialchars($cuotas_usuario[0]['nombres'] . ' ' . $cuotas_usuario[0]['apellidos']); ?>')">
+                                            💰 Registrar Pago
+                                        </button>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
         <?php endif; ?>
+    </div>
+
+    <!-- Modal para registrar pago -->
+    <div id="modalPago" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>💰 Registrar Pago</h3>
+                <span class="close" onclick="cerrarModal('modalPago')">&times;</span>
+            </div>
+            <form method="POST" id="formPago">
+                <input type="hidden" name="usuario_id" id="usuario_id_pago">
+                <div class="form-group">
+                    <label>Usuario:</label>
+                    <p id="nombre_usuario_pago" style="font-weight: bold; margin: 5px 0;"></p>
+                </div>
+                <div class="form-group">
+                    <label for="cuota_id">Cuota a Pagar:</label>
+                    <select name="cuota_id" id="cuota_id" required>
+                        <option value="">Seleccionar cuota</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="monto_pagado">Monto Pagado ($):</label>
+                    <input type="number" name="monto_pagado" id="monto_pagado" required min="0" step="100">
+                </div>
+                <div class="form-group">
+                    <label for="observaciones">Observaciones:</label>
+                    <textarea name="observaciones" id="observaciones" rows="3" placeholder="Forma de pago, referencia, etc."></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" name="registrar_pago" class="btn btn-success">💾 Registrar Pago</button>
+                    <button type="button" class="btn btn-danger" onclick="cerrarModal('modalPago')">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <script>
@@ -562,6 +673,65 @@ function formato_dinero($monto) {
                 selectAño.value = añoActual;
             }
         });
+
+        // Funciones para el modal de pago
+        function registrarPago(usuarioId, nombreUsuario) {
+            document.getElementById('usuario_id_pago').value = usuarioId;
+            document.getElementById('nombre_usuario_pago').textContent = nombreUsuario;
+            
+            // Cargar cuotas pendientes del usuario
+            cargarCuotasPendientes(usuarioId);
+            
+            document.getElementById('modalPago').style.display = 'block';
+        }
+
+        function cargarCuotasPendientes(usuarioId) {
+            const añoSeleccionado = <?php echo $año_seleccionado; ?>;
+            const selectCuotas = document.getElementById('cuota_id');
+            selectCuotas.innerHTML = '<option value="">Cargando cuotas...</option>';
+            
+            // En una implementación real, aquí harías una llamada AJAX al servidor
+            // Por ahora, simulamos con las cuotas que ya tenemos cargadas
+            setTimeout(() => {
+                selectCuotas.innerHTML = '<option value="">Seleccionar cuota</option>';
+                
+                <?php foreach ($cuotas_año as $cuota): ?>
+                <?php if ($cuota['estado'] !== 'pagado'): ?>
+                if (<?php echo $cuota['usuario_id']; ?> === usuarioId) {
+                    const option = document.createElement('option');
+                    option.value = <?php echo $cuota['id']; ?>;
+                    option.textContent = '<?php echo $meses_nombres[$cuota["mes"]]; ?> - $<?php echo $cuota["monto_esperado"]; ?> (<?php echo ucfirst($cuota["estado"]); ?>)';
+                    option.setAttribute('data-monto', <?php echo $cuota['monto_esperado']; ?>);
+                    selectCuotas.appendChild(option);
+                }
+                <?php endif; ?>
+                <?php endforeach; ?>
+                
+                if (selectCuotas.options.length === 1) {
+                    selectCuotas.innerHTML = '<option value="">No hay cuotas pendientes</option>';
+                }
+            }, 500);
+        }
+
+        function cerrarModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Auto-completar monto cuando se selecciona una cuota
+        document.getElementById('cuota_id').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value && selectedOption.getAttribute('data-monto')) {
+                document.getElementById('monto_pagado').value = selectedOption.getAttribute('data-monto');
+            }
+        });
     </script>
 </body>
 </html>
+[file content end]
