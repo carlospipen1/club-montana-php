@@ -1,5 +1,4 @@
-﻿
-<?php
+﻿<?php
 session_start();
 header('Content-Type: text/html; charset=utf-8');
 
@@ -76,7 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['habilitar_año']) && 
             }
         } catch (Exception $e) {
             $mensaje = "❌ Error habilitando año: " . $e->getMessage();
-            error_log("Error en habilitar_año: " . $e->getMessage());
         }
     }
 }
@@ -95,10 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_pago']) && 
             $cuota = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($cuota) {
-                $estado = 'pagado';
-                if ($monto_pagado < $cuota['monto_esperado']) {
-                    $estado = 'parcial';
-                }
+                $estado = ($monto_pagado >= $cuota['monto_esperado']) ? 'pagado' : 'parcial';
                 
                 $stmt = $db->prepare("UPDATE cuotas_mensuales SET monto_pagado = ?, estado = ?, fecha_pago = CURRENT_DATE, observaciones = ?, registrado_por = ? WHERE id = ?");
                 $stmt->execute([$monto_pagado, $estado, $observaciones, $_SESSION['usuario_id'], $cuota_id]);
@@ -115,10 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar_pago']) && 
     }
 }
 
-// Obtener años disponibles
+// Obtener años disponibles para habilitar
 $anos_disponibles = [];
 $ano_actual = date('Y');
-for ($i = $ano_actual - 2; $i <= $ano_actual + 2; $i++) {
+for ($i = $ano_actual - 1; $i <= $ano_actual + 2; $i++) {
     $anos_disponibles[] = $i;
 }
 
@@ -131,11 +126,8 @@ try {
     // Tabla puede no existir aún
 }
 
-// Obtener año seleccionado (por defecto el año actual)
-$año_seleccionado = $_GET['año'] ?? $ano_actual;
-if (!empty($anos_habilitados) && !in_array($año_seleccionado, array_column($anos_habilitados, 'año'))) {
-    $año_seleccionado = $anos_habilitados[0]['año'] ?? $ano_actual;
-}
+// Obtener año seleccionado (por defecto el primer año habilitado o año actual)
+$año_seleccionado = $_GET['año'] ?? ($anos_habilitados[0]['año'] ?? $ano_actual);
 
 // Obtener cuotas del año seleccionado
 $cuotas_año = [];
@@ -151,51 +143,53 @@ $resumen_año = [
 $mis_cuotas = [];
 
 try {
-    // Obtener cuotas del año seleccionado - SIEMPRE para mostrar en registro
-    $stmt = $db->prepare("
-        SELECT 
-            cm.*,
-            u.nombres,
-            u.apellidos,
-            u.email,
-            u.tipo_miembro
-        FROM cuotas_mensuales cm
-        JOIN usuarios u ON cm.usuario_id = u.id
-        WHERE cm.año = ?
-        ORDER BY u.apellidos, u.nombres, cm.mes
-    ");
-    $stmt->execute([$año_seleccionado]);
-    $cuotas_año = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Calcular resumen
-    if (!empty($cuotas_año)) {
-        $usuarios_unicos = array_unique(array_column($cuotas_año, 'usuario_id'));
-        $resumen_año['total_usuarios'] = count($usuarios_unicos);
-        $resumen_año['total_meses'] = count($cuotas_año);
-        $resumen_año['total_esperado'] = array_sum(array_column($cuotas_año, 'monto_esperado'));
-        $resumen_año['total_pagado'] = array_sum(array_column($cuotas_año, 'monto_pagado'));
-        $resumen_año['porcentaje_pagado'] = $resumen_año['total_esperado'] > 0 ? 
-            ($resumen_año['total_pagado'] / $resumen_año['total_esperado']) * 100 : 0;
+    // Solo cargar cuotas si el año está habilitado
+    if (!empty($anos_habilitados) && in_array($año_seleccionado, array_column($anos_habilitados, 'año'))) {
+        // Obtener cuotas del año seleccionado
+        $stmt = $db->prepare("
+            SELECT 
+                cm.*,
+                u.nombres,
+                u.apellidos,
+                u.email,
+                u.tipo_miembro
+            FROM cuotas_mensuales cm
+            JOIN usuarios u ON cm.usuario_id = u.id
+            WHERE cm.año = ?
+            ORDER BY u.apellidos, u.nombres, cm.mes
+        ");
+        $stmt->execute([$año_seleccionado]);
+        $cuotas_año = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Calcular resumen
+        if (!empty($cuotas_año)) {
+            $usuarios_unicos = array_unique(array_column($cuotas_año, 'usuario_id'));
+            $resumen_año['total_usuarios'] = count($usuarios_unicos);
+            $resumen_año['total_meses'] = count($cuotas_año);
+            $resumen_año['total_esperado'] = array_sum(array_column($cuotas_año, 'monto_esperado'));
+            $resumen_año['total_pagado'] = array_sum(array_column($cuotas_año, 'monto_pagado'));
+            $resumen_año['porcentaje_pagado'] = $resumen_año['total_esperado'] > 0 ? 
+                ($resumen_año['total_pagado'] / $resumen_año['total_esperado']) * 100 : 0;
+        }
+        
+        // Obtener mis cuotas (para usuarios normales)
+        $stmt = $db->prepare("
+            SELECT 
+                cm.*,
+                u.nombres,
+                u.apellidos,
+                u.tipo_miembro
+            FROM cuotas_mensuales cm
+            JOIN usuarios u ON cm.usuario_id = u.id
+            WHERE cm.usuario_id = ? AND cm.año = ?
+            ORDER BY cm.mes
+        ");
+        $stmt->execute([$_SESSION['usuario_id'], $año_seleccionado]);
+        $mis_cuotas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    
-    // Obtener mis cuotas (para usuarios normales)
-    $stmt = $db->prepare("
-        SELECT 
-            cm.*,
-            u.nombres,
-            u.apellidos,
-            u.tipo_miembro
-        FROM cuotas_mensuales cm
-        JOIN usuarios u ON cm.usuario_id = u.id
-        WHERE cm.usuario_id = ? AND cm.año = ?
-        ORDER BY cm.mes
-    ");
-    $stmt->execute([$_SESSION['usuario_id'], $año_seleccionado]);
-    $mis_cuotas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
     // Si hay error, probablemente la tabla no existe aún
-    $mensaje = "Error cargando cuotas: " . $e->getMessage();
 }
 
 // Nombres de meses
@@ -344,15 +338,20 @@ function formato_dinero($monto) {
 
         <!-- Selector de año -->
         <div class="card">
-            <h3>📅 Año: <?php echo $año_seleccionado; ?></h3>
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <?php foreach ($anos_habilitados as $ano): ?>
-                <a href="?año=<?php echo $ano['año']; ?>" 
-                   class="btn <?php echo $año_seleccionado == $ano['año'] ? 'btn-success' : 'btn-info'; ?>">
-                   <?php echo $ano['año']; ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
+            <h3>📅 Años Habilitados</h3>
+            <?php if (empty($anos_habilitados)): ?>
+                <p>No hay años habilitados. Ve a la pestaña <strong>Gestión</strong> para habilitar un año.</p>
+            <?php else: ?>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <?php foreach ($anos_habilitados as $ano): ?>
+                    <a href="?año=<?php echo $ano['año']; ?>" 
+                       class="btn <?php echo $año_seleccionado == $ano['año'] ? 'btn-success' : 'btn-info'; ?>">
+                       <?php echo $ano['año']; ?>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <p style="margin-top: 10px; color: #666;">Año actual seleccionado: <strong><?php echo $año_seleccionado; ?></strong></p>
+            <?php endif; ?>
         </div>
 
         <!-- Pestañas principales -->
@@ -369,10 +368,15 @@ function formato_dinero($monto) {
         <div id="resumen" class="tab-content active">
             <h2>📊 Resumen <?php echo $año_seleccionado; ?></h2>
             
-            <?php if (empty($cuotas_año) && $puede_gestionar): ?>
+            <?php if (empty($anos_habilitados)): ?>
                 <div class="card">
-                    <p>No hay cuotas creadas para el año <?php echo $año_seleccionado; ?>.</p>
-                    <p>Ve a la pestaña <strong>Gestión</strong> y haz click en "Habilitar Año" para crear las cuotas.</p>
+                    <p>No hay años habilitados para mostrar.</p>
+                    <p>Ve a la pestaña <strong>Gestión</strong> y haz click en "Habilitar Año" para comenzar.</p>
+                </div>
+            <?php elseif (empty($cuotas_año)): ?>
+                <div class="card">
+                    <p>El año <?php echo $año_seleccionado; ?> está habilitado pero no hay cuotas creadas.</p>
+                    <p>Si acabas de habilitar el año, recarga la página o ve a la pestaña de Gestión y haz click en "Habilitar Año" nuevamente.</p>
                 </div>
             <?php else: ?>
                 <div class="grid-4">
@@ -417,7 +421,11 @@ function formato_dinero($monto) {
         <div id="mis-cuotas" class="tab-content">
             <h2>📋 Mis Cuotas <?php echo $año_seleccionado; ?></h2>
             
-            <?php if (empty($mis_cuotas)): ?>
+            <?php if (empty($anos_habilitados)): ?>
+                <div class="card">
+                    <p>No hay años habilitados.</p>
+                </div>
+            <?php elseif (empty($mis_cuotas)): ?>
                 <div class="card">
                     <p>No tienes cuotas registradas para el año <?php echo $año_seleccionado; ?>.</p>
                     <p>Si crees que esto es un error, contacta al tesorero del club.</p>
@@ -495,7 +503,9 @@ function formato_dinero($monto) {
                         <select id="año" name="año" required>
                             <option value="">Seleccionar año</option>
                             <?php foreach ($anos_disponibles as $ano): ?>
-                            <option value="<?php echo $ano; ?>"><?php echo $ano; ?></option>
+                            <option value="<?php echo $ano; ?>" <?php echo in_array($ano, array_column($anos_habilitados, 'año')) ? 'disabled' : ''; ?>>
+                                <?php echo $ano; ?><?php echo in_array($ano, array_column($anos_habilitados, 'año')) ? ' (Ya habilitado)' : ''; ?>
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -508,16 +518,52 @@ function formato_dinero($monto) {
                     💡 Al habilitar un año, se crearán automáticamente todas las cuotas mensuales para todos los socios activos.
                 </p>
             </div>
+
+            <!-- Años habilitados -->
+            <?php if (!empty($anos_habilitados)): ?>
+            <div class="card">
+                <h3>📋 Años Habilitados</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Año</th>
+                            <th>Estado</th>
+                            <th>Fecha de Habilitación</th>
+                            <th>Habilitado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($anos_habilitados as $ano): ?>
+                        <tr>
+                            <td><strong><?php echo $ano['año']; ?></strong></td>
+                            <td>
+                                <span class="estado-badge estado-<?php echo $ano['estado']; ?>">
+                                    <?php echo ucfirst($ano['estado']); ?>
+                                </span>
+                            </td>
+                            <td><?php echo date('d/m/Y H:i', strtotime($ano['fecha_creacion'])); ?></td>
+                            <td><?php echo $ano['creado_por'] ? 'Usuario ID: ' . $ano['creado_por'] : 'Sistema'; ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Registro de pagos -->
         <div id="registro" class="tab-content">
             <h2>📝 Registro de Pagos - <?php echo $año_seleccionado; ?></h2>
             
-            <?php if (empty($cuotas_año)): ?>
+            <?php if (empty($anos_habilitados)): ?>
                 <div class="card">
-                    <p>No hay cuotas registradas para el año <?php echo $año_seleccionado; ?>.</p>
-                    <p>Habilita el año primero en la pestaña de Gestión.</p>
+                    <p>No hay años habilitados.</p>
+                    <p>Habilita un año primero en la pestaña de Gestión.</p>
+                </div>
+            <?php elseif (empty($cuotas_año)): ?>
+                <div class="card">
+                    <p>No hay cuotas creadas para el año <?php echo $año_seleccionado; ?>.</p>
+                    <p>Ve a la pestaña <strong>Gestión</strong> y haz click en "Habilitar Año" para crear las cuotas.</p>
                 </div>
             <?php else: ?>
                 <div class="card">
@@ -655,15 +701,6 @@ function formato_dinero($monto) {
             document.getElementById(tabName).classList.add('active');
             event.currentTarget.classList.add('active');
         }
-        
-        // Configurar año actual por defecto
-        document.addEventListener('DOMContentLoaded', function() {
-            const añoActual = new Date().getFullYear();
-            const selectAño = document.getElementById('año');
-            if (selectAño) {
-                selectAño.value = añoActual;
-            }
-        });
 
         // Funciones para el modal de pago
         function registrarPago(usuarioId, nombreUsuario) {

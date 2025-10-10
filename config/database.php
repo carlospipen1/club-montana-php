@@ -159,10 +159,10 @@ class Database {
         // Insertar usuario general de ejemplo
         $stmt->execute(['general@clubmontana.cl', password_hash('general123', PASSWORD_DEFAULT), 'María', 'General', 'general', 'miembro']);
         
-        // Crear año actual en cuotas_anuales
-        $año_actual = date('Y');
-        $stmt = $this->conn->prepare("INSERT OR IGNORE INTO cuotas_anuales (año, estado, creado_por) VALUES (?, 'activo', 1)");
-        $stmt->execute([$año_actual]);
+        // NO crear año automáticamente - debe ser creado manualmente por el tesorero
+        // $año_actual = date('Y');
+        // $stmt = $this->conn->prepare("INSERT OR IGNORE INTO cuotas_anuales (año, estado, creado_por) VALUES (?, 'activo', 1)");
+        // $stmt->execute([$año_actual]);
     }
 }
 ?>
