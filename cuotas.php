@@ -1,5 +1,5 @@
 ﻿
-﻿<?php
+<?php
 session_start();
 header('Content-Type: text/html; charset=utf-8');
 
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['habilitar_año']) && 
                 $stmt->execute([$año, $_SESSION['usuario_id']]);
                 
                 // Obtener usuarios activos
-                $usuarios = $db->query("SELECT id, tipo_miembro FROM usuarios WHERE estado = 'activo' AND rol != 'admin'")->fetchAll(PDO::FETCH_ASSOC);
+                $usuarios = $db->query("SELECT id, tipo_miembro FROM usuarios WHERE estado = 'activo'")->fetchAll(PDO::FETCH_ASSOC);
                 
                 // Preparar statement para insertar cuotas mensuales
                 $stmt_cuota = $db->prepare("INSERT INTO cuotas_mensuales (año, mes, usuario_id, tipo_miembro, monto_esperado) VALUES (?, ?, ?, ?, ?)");
@@ -137,7 +137,7 @@ if (!empty($anos_habilitados) && !in_array($año_seleccionado, array_column($ano
     $año_seleccionado = $anos_habilitados[0]['año'] ?? $ano_actual;
 }
 
-// Obtener cuotas del año seleccionado - SIEMPRE cargar para mostrar en registro
+// Obtener cuotas del año seleccionado
 $cuotas_año = [];
 $resumen_año = [
     'total_usuarios' => 0,
@@ -151,7 +151,7 @@ $resumen_año = [
 $mis_cuotas = [];
 
 try {
-    // Obtener cuotas del año seleccionado - SIEMPRE para tesoreros/admins
+    // Obtener cuotas del año seleccionado - SIEMPRE para mostrar en registro
     $stmt = $db->prepare("
         SELECT 
             cm.*,
@@ -166,15 +166,6 @@ try {
     ");
     $stmt->execute([$año_seleccionado]);
     $cuotas_año = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Si no hay cuotas pero el año está habilitado, mostrar mensaje
-    if (empty($cuotas_año)) {
-        $stmt = $db->prepare("SELECT id FROM cuotas_anuales WHERE año = ?");
-        $stmt->execute([$año_seleccionado]);
-        if ($stmt->fetch()) {
-            $mensaje = "ℹ️ El año $año_seleccionado está habilitado pero no hay cuotas creadas. Ve a la pestaña Gestión y haz click en 'Habilitar Año' nuevamente.";
-        }
-    }
     
     // Calcular resumen
     if (!empty($cuotas_año)) {
@@ -203,8 +194,8 @@ try {
     $mis_cuotas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
+    // Si hay error, probablemente la tabla no existe aún
     $mensaje = "Error cargando cuotas: " . $e->getMessage();
-    error_log("Error cargando cuotas: " . $e->getMessage());
 }
 
 // Nombres de meses
@@ -241,6 +232,7 @@ function formato_dinero($monto) {
         .mensaje { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
         .nav { background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .nav a { margin-right: 15px; color: #2c5aa0; text-decoration: none; font-weight: bold; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
