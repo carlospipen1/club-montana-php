@@ -26,6 +26,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_salida'])) {
     
     if (!empty($nombre) && !empty($fecha_salida)) {
         try {
+            // Asegurar que la tabla salidas tiene todas las columnas necesarias
+            $db->exec("CREATE TABLE IF NOT EXISTS salidas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                descripcion TEXT,
+                fecha_salida DATETIME NOT NULL,
+                fecha_limite_inscripcion DATETIME NOT NULL,
+                lugar TEXT,
+                nivel_dificultad TEXT DEFAULT 'medio',
+                cupo_maximo INTEGER DEFAULT 20,
+                equipo_requerido TEXT,
+                encargado_id INTEGER,
+                estado TEXT DEFAULT 'planificada',
+                fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+            )");
+            
             $stmt = $db->prepare("INSERT INTO salidas (nombre, descripcion, fecha_salida, fecha_limite_inscripcion, lugar, nivel_dificultad, cupo_maximo, equipo_requerido, encargado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$nombre, $descripcion, $fecha_salida, $fecha_limite_inscripcion, $lugar, $nivel_dificultad, $cupo_maximo, $equipo_requerido, $_SESSION['usuario_id']]);
             
@@ -71,6 +87,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['inscribirse'])) {
                 } elseif ($salida['inscritos_count'] >= $salida['cupo_maximo']) {
                     $mensaje = "❌ Cupo completo para esta salida";
                 } else {
+                    // Asegurar que existe la tabla de inscripciones
+                    $db->exec("CREATE TABLE IF NOT EXISTS inscripciones_salidas (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        salida_id INTEGER NOT NULL,
+                        usuario_id INTEGER NOT NULL,
+                        fecha_inscripcion DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        asistio BOOLEAN DEFAULT 0,
+                        observaciones TEXT,
+                        UNIQUE(salida_id, usuario_id),
+                        FOREIGN KEY (salida_id) REFERENCES salidas(id),
+                        FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+                    )");
+                    
                     $stmt = $db->prepare("INSERT OR IGNORE INTO inscripciones_salidas (salida_id, usuario_id, fecha_inscripcion) VALUES (?, ?, CURRENT_TIMESTAMP)");
                     $stmt->execute([$salida_id, $_SESSION['usuario_id']]);
                     
@@ -84,6 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['inscribirse'])) {
                         $mensaje = "ℹ️ Ya estabas inscrito en esta salida";
                     }
                 }
+            } else {
+                $mensaje = "❌ Salida no encontrada";
             }
         } catch (Exception $e) {
             $mensaje = "❌ Error al inscribirse: " . $e->getMessage();
@@ -102,6 +133,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancelar_inscripcion'
             
             if ($stmt->rowCount() > 0) {
                 $mensaje = "✅ Inscripción cancelada correctamente";
+            } else {
+                $mensaje = "ℹ️ No estabas inscrito en esta salida";
             }
         } catch (Exception $e) {
             $mensaje = "❌ Error al cancelar inscripción: " . $e->getMessage();
@@ -115,7 +148,22 @@ $mis_inscripciones = [];
 $salida_detalle = null;
 
 try {
-    // Crear tabla de inscripciones si no existe
+    // Asegurar que las tablas existen con todas las columnas
+    $db->exec("CREATE TABLE IF NOT EXISTS salidas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT NOT NULL,
+        descripcion TEXT,
+        fecha_salida DATETIME NOT NULL,
+        fecha_limite_inscripcion DATETIME NOT NULL,
+        lugar TEXT,
+        nivel_dificultad TEXT DEFAULT 'medio',
+        cupo_maximo INTEGER DEFAULT 20,
+        equipo_requerido TEXT,
+        encargado_id INTEGER,
+        estado TEXT DEFAULT 'planificada',
+        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+    )");
+    
     $db->exec("CREATE TABLE IF NOT EXISTS inscripciones_salidas (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         salida_id INTEGER NOT NULL,
@@ -128,41 +176,38 @@ try {
         FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     )");
     
-    // Actualizar tabla salidas si es necesario
-    $db->exec("ALTER TABLE salidas ADD COLUMN equipo_requerido TEXT");
-    $db->exec("ALTER TABLE salidas ADD COLUMN cupo_maximo INTEGER DEFAULT 20");
-    $db->exec("ALTER TABLE salidas ADD COLUMN nivel_dificultad TEXT DEFAULT 'medio'");
-    
     // Obtener salida específica si hay ID
     if (isset($_GET['id']) && is_numeric($_GET['id'])) {
         $stmt = $db->prepare("
             SELECT s.*, 
                    u.nombres as encargado_nombres, 
                    u.apellidos as encargado_apellidos,
-                   COUNT(i.id) as inscritos_count
+                   COUNT(i.id) as inscritos_count,
+                   EXISTS(SELECT 1 FROM inscripciones_salidas WHERE salida_id = s.id AND usuario_id = ?) as estoy_inscrito
             FROM salidas s 
             LEFT JOIN usuarios u ON s.encargado_id = u.id 
             LEFT JOIN inscripciones_salidas i ON s.id = i.salida_id 
             WHERE s.id = ?
             GROUP BY s.id
         ");
-        $stmt->execute([$_GET['id']]);
+        $stmt->execute([$_SESSION['usuario_id'], $_GET['id']]);
         $salida_detalle = $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
     // Obtener todas las salidas
-    $stmt = $db->query("
+    $stmt = $db->prepare("
         SELECT s.*, 
                u.nombres as encargado_nombres, 
                u.apellidos as encargado_apellidos,
                COUNT(i.id) as inscritos_count,
-               EXISTS(SELECT 1 FROM inscripciones_salidas WHERE salida_id = s.id AND usuario_id = {$_SESSION['usuario_id']}) as estoy_inscrito
+               EXISTS(SELECT 1 FROM inscripciones_salidas WHERE salida_id = s.id AND usuario_id = ?) as estoy_inscrito
         FROM salidas s 
         LEFT JOIN usuarios u ON s.encargado_id = u.id 
         LEFT JOIN inscripciones_salidas i ON s.id = i.salida_id 
         GROUP BY s.id 
         ORDER BY s.fecha_salida ASC
     ");
+    $stmt->execute([$_SESSION['usuario_id']]);
     $salidas = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Obtener mis inscripciones
@@ -177,10 +222,7 @@ try {
     $mis_inscripciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (Exception $e) {
-    // Ignorar errores de ALTER TABLE si las columnas ya existen
-    if (strpos($e->getMessage(), 'duplicate column name') === false) {
-        $mensaje = "Error cargando salidas: " . $e->getMessage();
-    }
+    $mensaje = "Error cargando salidas: " . $e->getMessage();
 }
 
 $niveles_dificultad = [
@@ -311,19 +353,11 @@ $niveles_dificultad = [
                     <p><?php echo $salida_detalle['inscritos_count']; ?> de <?php echo $salida_detalle['cupo_maximo']; ?> cupos ocupados</p>
                     
                     <?php
-                    $estoy_inscrito = false;
-                    foreach ($mis_inscripciones as $inscripcion) {
-                        if ($inscripcion['id'] == $salida_detalle['id']) {
-                            $estoy_inscrito = true;
-                            break;
-                        }
-                    }
-                    
                     $fecha_limite_pasada = time() > strtotime($salida_detalle['fecha_limite_inscripcion']);
                     $cupo_completo = $salida_detalle['inscritos_count'] >= $salida_detalle['cupo_maximo'];
                     ?>
                     
-                    <?php if ($estoy_inscrito): ?>
+                    <?php if ($salida_detalle['estoy_inscrito']): ?>
                         <form method="POST" style="margin-top: 15px;">
                             <input type="hidden" name="salida_id" value="<?php echo $salida_detalle['id']; ?>">
                             <button type="submit" name="cancelar_inscripcion" class="btn btn-danger">❌ Cancelar Inscripción</button>
@@ -361,6 +395,9 @@ $niveles_dificultad = [
             <?php if (empty($salidas)): ?>
                 <div class="card">
                     <p>No hay salidas programadas.</p>
+                    <?php if ($_SESSION['usuario_rol'] === 'admin' || $_SESSION['usuario_rol'] === 'comision_tecnica' || $_SESSION['usuario_rol'] === 'presidente'): ?>
+                    <p>¡Crea la primera salida haciendo click en la pestaña "Crear Salida"!</p>
+                    <?php endif; ?>
                 </div>
             <?php else: ?>
                 <div class="grid-2">
