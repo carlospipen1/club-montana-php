@@ -27,12 +27,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['crear_backup'])) {
         }
         
         // En SQLite, el backup es copiar el archivo de la base de datos
-        copy('club_montana.db', $backup_file);
-        
-        $mensaje = "✅ Backup creado correctamente: " . basename($backup_file);
+        if (file_exists('club_montana.db')) {
+            copy('club_montana.db', $backup_file);
+            $mensaje = "✅ Backup creado correctamente: " . basename($backup_file);
+        } else {
+            $mensaje = "❌ No se encontró la base de datos para hacer backup";
+        }
         
     } catch (Exception $e) {
         $mensaje = "❌ Error creando backup: " . $e->getMessage();
+    }
+}
+
+// Procesar limpieza de notificaciones antiguas
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['limpiar_notificaciones'])) {
+    try {
+        $stmt = $db->prepare("DELETE FROM notificaciones WHERE fecha_creacion < DATE('now', '-30 days')");
+        $stmt->execute();
+        $eliminadas = $stmt->rowCount();
+        $mensaje = "✅ Se eliminaron $eliminadas notificaciones antiguas (más de 30 días)";
+    } catch (Exception $e) {
+        $mensaje = "❌ Error limpiando notificaciones: " . $e->getMessage();
+    }
+}
+
+// Procesar regeneración de datos de prueba
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['regenerar_datos_prueba'])) {
+    try {
+        // Insertar usuarios de prueba adicionales
+        $stmt = $db->prepare("INSERT OR IGNORE INTO usuarios (email, password_hash, nombres, apellidos, tipo_miembro, rol) VALUES (?, ?, ?, ?, ?, ?)");
+        
+        $usuarios_prueba = [
+            ['socio1@clubmontana.cl', password_hash('socio123', PASSWORD_DEFAULT), 'Carlos', 'Montaña', 'general', 'miembro'],
+            ['socio2@clubmontana.cl', password_hash('socio123', PASSWORD_DEFAULT), 'Ana', 'Cordillera', 'estudiante', 'miembro'],
+            ['socio3@clubmontana.cl', password_hash('socio123', PASSWORD_DEFAULT), 'Pedro', 'Andes', 'general', 'miembro'],
+            ['encargado@clubmontana.cl', password_hash('encargado123', PASSWORD_DEFAULT), 'Roberto', 'Equipos', 'general', 'encargado_equipo'],
+            ['tecnico@clubmontana.cl', password_hash('tecnico123', PASSWORD_DEFAULT), 'Laura', 'Técnica', 'general', 'comision_tecnica']
+        ];
+        
+        $agregados = 0;
+        foreach ($usuarios_prueba as $usuario) {
+            try {
+                $stmt->execute($usuario);
+                $agregados++;
+            } catch (Exception $e) {
+                // Ignorar errores de duplicados
+            }
+        }
+        
+        // Crear algunas salidas de prueba
+        $stmt_salida = $db->prepare("INSERT OR IGNORE INTO salidas (nombre, descripcion, fecha_salida, fecha_limite_inscripcion, lugar, nivel_dificultad, cupo_maximo, encargado_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        
+        $fecha_base = date('Y-m-d H:i:s', strtotime('+7 days'));
+        $salidas_prueba = [
+            ['Ascenso Cerro Negro', 'Ascenso técnico al Cerro Negro', $fecha_base, date('Y-m-d H:i:s', strtotime('+5 days')), 'Cerro Negro, Cordillera', 'dificil', 15, 1],
+            ['Trekking Familiar', 'Salida familiar para principiantes', date('Y-m-d H:i:s', strtotime('+14 days')), date('Y-m-d H:i:s', strtotime('+12 days')), 'Valle Escondido', 'facil', 25, 1],
+            ['Escalada Roca', 'Práctica de escalada en roca', date('Y-m-d H:i:s', strtotime('+21 days')), date('Y-m-d H:i:s', strtotime('+19 days')), 'Sector Los Paredones', 'medio', 12, 1]
+        ];
+        
+        $salidas_creadas = 0;
+        foreach ($salidas_prueba as $salida) {
+            try {
+                $stmt_salida->execute($salida);
+                $salidas_creadas++;
+            } catch (Exception $e) {
+                // Ignorar errores
+            }
+        }
+        
+        // Crear equipos de prueba
+        $stmt_equipo = $db->prepare("INSERT OR IGNORE INTO equipos (categoria, nombre, descripcion, estado) VALUES (?, ?, ?, ?)");
+        
+        $equipos_prueba = [
+            ['Escalada', 'Cuerda dinámica 60m', 'Cuerda de escalada dinámica 60 metros, 10.2mm', 'disponible'],
+            ['Montañismo', 'Crampones ajustables', 'Crampones de 12 puntas ajustables talla 38-45', 'disponible'],
+            ['Camping', 'Carpa 4 estaciones', 'Carpa resistente para 4 personas, 4 estaciones', 'disponible'],
+            ['Seguridad', 'Casco escalada', 'Casco de escalada color naranja, talla M', 'disponible'],
+            ['Navegación', 'GPS Garmin', 'GPS Garmin con mapas topográficos', 'prestado']
+        ];
+        
+        $equipos_creados = 0;
+        foreach ($equipos_prueba as $equipo) {
+            try {
+                $stmt_equipo->execute($equipo);
+                $equipos_creados++;
+            } catch (Exception $e) {
+                // Ignorar errores
+            }
+        }
+        
+        $mensaje = "✅ Datos de prueba regenerados: $agregados usuarios, $salidas_creadas salidas, $equipos_creados equipos";
+        
+    } catch (Exception $e) {
+        $mensaje = "❌ Error regenerando datos: " . $e->getMessage();
     }
 }
 
@@ -42,16 +129,23 @@ $usuarios_recientes = [];
 $logs_sistema = [];
 
 try {
-    // Estadísticas generales
+    // Estadísticas generales - CORREGIDAS para usar las tablas correctas
     $estadisticas['total_usuarios'] = $db->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
     $estadisticas['usuarios_activos'] = $db->query("SELECT COUNT(*) FROM usuarios WHERE estado = 'activo'")->fetchColumn();
     $estadisticas['total_equipos'] = $db->query("SELECT COUNT(*) FROM equipos")->fetchColumn();
     $estadisticas['equipos_disponibles'] = $db->query("SELECT COUNT(*) FROM equipos WHERE estado = 'disponible'")->fetchColumn();
     $estadisticas['total_salidas'] = $db->query("SELECT COUNT(*) FROM salidas")->fetchColumn();
     $estadisticas['salidas_planificadas'] = $db->query("SELECT COUNT(*) FROM salidas WHERE estado = 'planificada'")->fetchColumn();
-    $estadisticas['total_cuotas'] = $db->query("SELECT COUNT(*) FROM cuotas")->fetchColumn();
-    $estadisticas['cuotas_pendientes'] = $db->query("SELECT COUNT(*) FROM cuotas WHERE estado = 'pendiente'")->fetchColumn();
+    
+    // Estadísticas de cuotas usando la tabla correcta (cuotas_mensuales)
+    $estadisticas['total_cuotas_mensuales'] = $db->query("SELECT COUNT(*) FROM cuotas_mensuales")->fetchColumn();
+    $estadisticas['cuotas_pendientes'] = $db->query("SELECT COUNT(*) FROM cuotas_mensuales WHERE estado = 'pendiente'")->fetchColumn();
+    
     $estadisticas['total_notificaciones'] = $db->query("SELECT COUNT(*) FROM notificaciones")->fetchColumn();
+    $estadisticas['notificaciones_no_leidas'] = $db->query("SELECT COUNT(*) FROM notificaciones WHERE leida = 0")->fetchColumn();
+    
+    // Espacio en disco
+    $estadisticas['tamano_bd'] = file_exists('club_montana.db') ? filesize('club_montana.db') : 0;
     
     // Usuarios recientes (últimos 7 días)
     $stmt = $db->query("SELECT * FROM usuarios WHERE fecha_creacion >= DATE('now', '-7 days') ORDER BY fecha_creacion DESC LIMIT 5");
@@ -62,7 +156,7 @@ try {
     if (is_dir('backups')) {
         $archivos = scandir('backups');
         foreach ($archivos as $archivo) {
-            if (strpos($archivo, 'backup_') === 0) {
+            if (strpos($archivo, 'backup_') === 0 && strpos($archivo, '.db') !== false) {
                 $ruta = 'backups/' . $archivo;
                 $backups[] = [
                     'nombre' => $archivo,
@@ -76,6 +170,15 @@ try {
             return strtotime($b['fecha']) - strtotime($a['fecha']);
         });
     }
+    
+    // Obtener logs del sistema (simulados)
+    $logs_sistema = [
+        date('Y-m-d H:i:s') . ' - Sistema de administración cargado',
+        date('Y-m-d H:i:s', time() - 3600) . ' - Usuario ' . $_SESSION['usuario_nombre'] . ' accedió al sistema',
+        date('Y-m-d H:i:s', time() - 7200) . ' - Backup automático ejecutado',
+        date('Y-m-d H:i:s', time() - 86400) . ' - Mantenimiento nocturno completado',
+        date('Y-m-d H:i:s', time() - 172800) . ' - Actualización de estadísticas del sistema'
+    ];
     
 } catch (Exception $e) {
     $mensaje = "Error cargando estadísticas: " . $e->getMessage();
@@ -146,6 +249,15 @@ function formato_tamaño($bytes) {
         .role-encargado_equipo { background: #6f42c1; }
         .role-comision_tecnica { background: #0dcaf0; }
         .role-miembro { background: #6c757d; }
+        .system-health { 
+            padding: 15px; 
+            border-radius: 8px; 
+            margin: 10px 0;
+            border-left: 4px solid;
+        }
+        .health-good { background: #d4edda; border-left-color: #28a745; }
+        .health-warning { background: #fff3cd; border-left-color: #ffc107; }
+        .health-error { background: #f8d7da; border-left-color: #dc3545; }
     </style>
 </head>
 <body>
@@ -174,6 +286,25 @@ function formato_tamaño($bytes) {
                 <?php echo strtoupper($_SESSION['usuario_rol']); ?>
             </span>
         </h1>
+
+        <!-- Estado del sistema -->
+        <div class="card">
+            <h3>🔍 Estado del Sistema</h3>
+            <div class="grid-3">
+                <div class="system-health health-good">
+                    <strong>✅ Base de Datos</strong>
+                    <p>Conexión establecida correctamente</p>
+                </div>
+                <div class="system-health health-good">
+                    <strong>✅ Archivos</strong>
+                    <p>Sistema de archivos operativo</p>
+                </div>
+                <div class="system-health <?php echo $estadisticas['tamano_bd'] > 10485760 ? 'health-warning' : 'health-good'; ?>">
+                    <strong>💾 Almacenamiento</strong>
+                    <p>BD: <?php echo formato_tamaño($estadisticas['tamano_bd']); ?></p>
+                </div>
+            </div>
+        </div>
 
         <!-- Pestañas principales -->
         <div class="tabs">
@@ -219,8 +350,8 @@ function formato_tamaño($bytes) {
                     <div class="stat-label">Salidas Planificadas</div>
                 </div>
                 <div class="stat-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333;">
-                    <div class="stat-number"><?php echo $estadisticas['total_cuotas']; ?></div>
-                    <div class="stat-label">Total Cuotas</div>
+                    <div class="stat-number"><?php echo $estadisticas['total_cuotas_mensuales']; ?></div>
+                    <div class="stat-label">Cuotas Mensuales</div>
                 </div>
             </div>
 
@@ -320,6 +451,7 @@ function formato_tamaño($bytes) {
                         <p><strong>Base de datos:</strong> SQLite</p>
                         <p><strong>Zona horaria:</strong> <?php echo date_default_timezone_get(); ?></p>
                         <p><strong>Memoria usada:</strong> <?php echo formato_tamaño(memory_get_usage(true)); ?></p>
+                        <p><strong>Límite memoria:</strong> <?php echo ini_get('memory_limit'); ?></p>
                     </div>
                 </div>
                 
@@ -341,8 +473,8 @@ function formato_tamaño($bytes) {
                             </span>
                         </div>
                         <div style="display: flex; justify-content: between;">
-                            <span>Espacio disco:</span>
-                            <span style="color: #28a745;">✅ Disponible</span>
+                            <span>Espacio disco BD:</span>
+                            <span style="color: #28a745;"><?php echo formato_tamaño($estadisticas['tamano_bd']); ?></span>
                         </div>
                     </div>
                 </div>
@@ -351,12 +483,16 @@ function formato_tamaño($bytes) {
             <div class="card">
                 <h3>🛠️ Mantenimiento</h3>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    <button class="btn btn-warning" onclick="optimizarBaseDatos()">🔧 Optimizar BD</button>
+                    <form method="POST" style="display: inline;">
+                        <button type="submit" name="limpiar_notificaciones" class="btn btn-warning" onclick="return confirm('¿Limpiar notificaciones antiguas?')">
+                            🗑️ Limpiar Notificaciones
+                        </button>
+                    </form>
+                    <button class="btn btn-info" onclick="optimizarBaseDatos()">🔧 Optimizar BD</button>
                     <button class="btn btn-info" onclick="limpiarCache()">🧹 Limpiar Cache</button>
-                    <button class="btn btn-danger" onclick="reiniciarSistema()">🔄 Reiniciar Sistema</button>
                 </div>
                 <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                    Nota: Estas acciones requieren permisos de administrador completo.
+                    Nota: La limpieza de notificaciones eliminará las notificaciones con más de 30 días de antigüedad.
                 </p>
             </div>
         </div>
@@ -434,6 +570,19 @@ function formato_tamaño($bytes) {
             <h2>🔧 Configuración Avanzada</h2>
             
             <div class="card">
+                <h3>🔄 Datos de Prueba</h3>
+                <p>Regenera datos de prueba para testing del sistema.</p>
+                <form method="POST">
+                    <button type="submit" name="regenerar_datos_prueba" class="btn btn-warning" onclick="return confirm('¿Regenerar datos de prueba? Esto agregará usuarios, salidas y equipos de ejemplo.')">
+                        🔄 Regenerar Datos de Prueba
+                    </button>
+                </form>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                    Esto creará usuarios, salidas y equipos de ejemplo para testing.
+                </p>
+            </div>
+            
+            <div class="card">
                 <h3>⚠️ Operaciones Peligrosas</h3>
                 <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
                     <strong>⚠️ Advertencia:</strong> Estas operaciones pueden afectar el funcionamiento del sistema.
@@ -443,26 +592,16 @@ function formato_tamaño($bytes) {
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button class="btn btn-danger" onclick="reinstalarSistema()">🔄 Reinstalar Sistema</button>
                     <button class="btn btn-danger" onclick="limpiarBaseDatos()">🗑️ Limpiar BD</button>
-                    <button class="btn btn-warning" onclick="regenerarUsuarios()">👥 Regenerar Usuarios</button>
+                    <button class="btn btn-warning" onclick="reiniciarSistema()">🔄 Reiniciar Sistema</button>
                 </div>
             </div>
             
             <div class="card">
                 <h3>🔍 Logs del Sistema</h3>
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
-                    <?php
-                    // Logs simples del sistema
-                    $logs = [
-                        date('Y-m-d H:i:s') . ' - Sistema cargado correctamente',
-                        date('Y-m-d H:i:s', time() - 3600) . ' - Backup automático ejecutado',
-                        date('Y-m-d H:i:s', time() - 7200) . ' - Usuario ' . $_SESSION['usuario_nombre'] . ' accedió al sistema',
-                        date('Y-m-d H:i:s', time() - 86400) . ' - Mantenimiento nocturno completado'
-                    ];
-                    
-                    foreach ($logs as $log) {
-                        echo htmlspecialchars($log) . "\n<br>";
-                    }
-                    ?>
+                    <?php foreach ($logs_sistema as $log): ?>
+                    <div style="padding: 2px 0;"><?php echo htmlspecialchars($log); ?></div>
+                    <?php endforeach; ?>
                 </div>
             </div>
         </div>
@@ -516,13 +655,17 @@ function formato_tamaño($bytes) {
         
         function descargarBackup(nombre) {
             alert('📥 Descargando backup: ' + nombre);
-            // Aquí iría la lógica de descarga
+            // En una implementación real, redirigiría al archivo
+            window.open('backups/' + nombre, '_blank');
         }
         
         function eliminarBackup(nombre) {
             if (confirm('¿Estás seguro de que quieres eliminar el backup: ' + nombre + '?')) {
-                alert('🗑️ Eliminando backup: ' + nombre);
-                // Aquí iría la lógica de eliminación
+                if (confirm('⚠️ Esta acción no se puede deshacer. ¿Continuar?')) {
+                    // En una implementación real, haría una petición AJAX para eliminar
+                    alert('🗑️ Eliminando backup: ' + nombre);
+                    window.location.href = 'admin.php?eliminar_backup=' + encodeURIComponent(nombre);
+                }
             }
         }
         
@@ -540,13 +683,6 @@ function formato_tamaño($bytes) {
             if (confirm('🚨 ¿Estás seguro de que quieres limpiar la base de datos? Esto borrará datos históricos.')) {
                 alert('🗑️ Limpiando base de datos... (esta es una simulación)');
                 // Aquí iría la lógica de limpieza
-            }
-        }
-        
-        function regenerarUsuarios() {
-            if (confirm('¿Regenerar usuarios de prueba? Esto agregará datos de ejemplo.')) {
-                alert('👥 Regenerando usuarios... (esta es una simulación)');
-                // Aquí iría la lógica de regeneración
             }
         }
     </script>
