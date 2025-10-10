@@ -66,17 +66,31 @@ class Database {
                 estado TEXT DEFAULT 'planificada'
             )",
             
-            "CREATE TABLE IF NOT EXISTS cuotas (
+            "CREATE TABLE IF NOT EXISTS cuotas_anuales (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                usuario_id INTEGER NOT NULL,
-                tipo TEXT NOT NULL,
-                monto REAL NOT NULL,
-                mes TEXT NOT NULL,
-                estado TEXT DEFAULT 'pendiente',
-                fecha_pago DATE,
-                fecha_vencimiento DATE NOT NULL,
+                año INTEGER NOT NULL,
+                estado TEXT DEFAULT 'activo', -- 'activo', 'inactivo'
                 fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+                creado_por INTEGER,
+                FOREIGN KEY (creado_por) REFERENCES usuarios(id)
+            )",
+            
+            "CREATE TABLE IF NOT EXISTS cuotas_mensuales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                año INTEGER NOT NULL,
+                mes INTEGER NOT NULL, -- 1 a 12
+                usuario_id INTEGER NOT NULL,
+                tipo_miembro TEXT NOT NULL, -- 'general' o 'estudiante'
+                monto_esperado REAL NOT NULL, -- Monto que debería pagar
+                monto_pagado REAL DEFAULT 0, -- Monto realmente pagado
+                estado TEXT DEFAULT 'pendiente', -- 'pendiente', 'pagado', 'parcial'
+                fecha_pago DATE,
+                observaciones TEXT,
+                registrado_por INTEGER,
+                fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(año, mes, usuario_id),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
+                FOREIGN KEY (registrado_por) REFERENCES usuarios(id)
             )",
             
             "CREATE TABLE IF NOT EXISTS inscripciones_salidas (
@@ -144,6 +158,11 @@ class Database {
         
         // Insertar usuario general de ejemplo
         $stmt->execute(['general@clubmontana.cl', password_hash('general123', PASSWORD_DEFAULT), 'María', 'General', 'general', 'miembro']);
+        
+        // Crear año actual en cuotas_anuales
+        $año_actual = date('Y');
+        $stmt = $this->conn->prepare("INSERT OR IGNORE INTO cuotas_anuales (año, estado, creado_por) VALUES (?, 'activo', 1)");
+        $stmt->execute([$año_actual]);
     }
 }
 ?>
