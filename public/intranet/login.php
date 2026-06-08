@@ -127,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         <div style="text-align: center; margin-top: 20px;">
             <a href="index.php" style="color: #2c5aa0;">← Volver al inicio</a>
+            <a href="install.php" style="color: #e67e22; font-weight: bold;">🔧 Instalar Base de Datos</a>
         </div>
     </div>
 </body>

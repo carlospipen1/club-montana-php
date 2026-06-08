@@ -4,6 +4,18 @@ if (!isset($_SESSION)) {
     session_start();
 }
 
+// 👇👇👇 AGREGAR BASE HREF CON JAVASCRIPT (más confiable)
+echo '<script>';
+echo 'document.addEventListener("DOMContentLoaded", function() {';
+echo '  if (!document.querySelector("base")) {';
+echo '    var base = document.createElement("base");';
+echo '    base.href = "/intranet/";';
+echo '    document.head.appendChild(base);';
+echo '  }';
+echo '});';
+echo '</script>';
+// 👆👆👆
+
 // Cargar notificaciones si el usuario está logueado
 $num_notificaciones = 0;
 if (isset($_SESSION['usuario_id'])) {
@@ -34,6 +46,11 @@ if (isset($_SESSION['usuario_id'])) {
         // Silenciar errores para no romper el header
         error_log("Error en header: " . $e->getMessage());
     }
+}
+
+if (!defined('BASE_HREF_SET')) {
+    define('BASE_HREF_SET', true);
+    echo '<base href="/intranet/">';
 }
 ?>
 <header style="
