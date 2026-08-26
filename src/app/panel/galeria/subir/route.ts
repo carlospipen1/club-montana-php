@@ -65,22 +65,34 @@ export async function POST(request: Request) {
   }
 
   const datos = Buffer.from(await archivo.arrayBuffer());
-  const guardado = await guardarArchivo(archivo.name, datos, archivo.type);
-
   const ancho = Number(formData.get("ancho"));
   const alto = Number(formData.get("alto"));
 
-  const [creada] = await db
-    .insert(fotos)
-    .values({
-      albumId,
-      url: guardado.url,
-      rutaAlmacenamiento: guardado.ruta,
-      ancho: Number.isFinite(ancho) && ancho > 0 ? ancho : null,
-      alto: Number.isFinite(alto) && alto > 0 ? alto : null,
-      orden: await siguienteOrden(albumId),
-    })
-    .returning({ id: fotos.id });
+  // Guardar y registrar puede fallar por motivos que sólo el proveedor conoce
+  // —un store mal configurado, una cuota agotada—. Sin este catch, la excepción
+  // sale como un 500 sin cuerpo JSON y el mantenedor muestra un error en blanco.
+  // La ruta ya exigió sesión y permiso, así que devolver el motivo es seguro.
+  try {
+    const guardado = await guardarArchivo(archivo.name, datos, archivo.type);
 
-  return Response.json({ id: creada.id, url: guardado.url });
+    const [creada] = await db
+      .insert(fotos)
+      .values({
+        albumId,
+        url: guardado.url,
+        rutaAlmacenamiento: guardado.ruta,
+        ancho: Number.isFinite(ancho) && ancho > 0 ? ancho : null,
+        alto: Number.isFinite(alto) && alto > 0 ? alto : null,
+        orden: await siguienteOrden(albumId),
+      })
+      .returning({ id: fotos.id });
+
+    return Response.json({ id: creada.id, url: guardado.url });
+  } catch (error) {
+    console.error(`Error al subir la foto ${archivo.name}:`, error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : "Error desconocido" },
+      { status: 500 },
+    );
+  }
 }

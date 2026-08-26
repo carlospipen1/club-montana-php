@@ -111,7 +111,9 @@ export function SubirFotos({ albumId }: { albumId: number }) {
 
         if (!respuesta.ok) {
           const { error } = await respuesta.json().catch(() => ({ error: "" }));
-          fallidos.push(`${archivo.name}: ${error || respuesta.statusText}`);
+          // Ojo: sobre HTTP/2 —lo que usa Vercel— `statusText` viene siempre
+          // vacío, así que como último recurso va el código numérico.
+          fallidos.push(`${archivo.name}: ${error || `error ${respuesta.status}`}`);
         }
       } catch (error) {
         fallidos.push(`${archivo.name}: ${(error as Error).message}`);
