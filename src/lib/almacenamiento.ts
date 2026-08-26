@@ -24,7 +24,16 @@ export type ArchivoGuardado = {
  * fotos de verdad hay que subirlas con el token puesto.
  */
 function usaBlob() {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
+  // Hay dos formas de autenticarse contra el store, y ambas cuentan:
+  //
+  // - En Vercel el store va conectado al proyecto por OIDC. No existe ningún
+  //   token de lectura/escritura: la plataforma inyecta `BLOB_STORE_ID` y un
+  //   token OIDC de vida corta que el SDK toma solo.
+  // - En local no hay OIDC, así que se usa el `BLOB_READ_WRITE_TOKEN` del store.
+  //
+  // Mirar solo el token daba un falso negativo en producción: el sitio creía
+  // estar en modo desarrollo e intentaba escribir en un disco de solo lectura.
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID);
 }
 
 export function almacenamientoEsPersistente() {

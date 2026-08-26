@@ -75,7 +75,9 @@ Abre <http://localhost:3000>. La intranet está en `/login`.
    - `DATABASE_URL`
    - `AUTH_SECRET`
    - `NEXT_PUBLIC_SITE_URL` (por ejemplo `https://club-montana.vercel.app`)
-   - `BLOB_READ_WRITE_TOKEN` (ver "La galería", más abajo)
+
+   El almacenamiento de fotos no lleva variable: se conecta aparte (ver "La
+   galería", más abajo).
 4. **Deploy**.
 
 Las migraciones se aplican desde tu computador con `npm run db:migrate` apuntando
@@ -90,9 +92,13 @@ a unos 300 KB, son 36 MB al año: el plan gratuito alcanza para muchos años.
 
 ### Activarla
 
-1. En Vercel: **Storage** -> **Create** -> **Blob**, y conéctalo al proyecto.
-2. Copia el `BLOB_READ_WRITE_TOKEN` que te entrega a `.env.local` y a las
-   variables de entorno del proyecto en Vercel.
+1. En Vercel: **Storage** -> **Create** -> **Blob**, y **Connect to Project**.
+   Con eso el sitio publicado queda listo: los proyectos conectados se autentican
+   por OIDC —Vercel inyecta `BLOB_STORE_ID` y un token de vida corta— así que no
+   hay que agregar ninguna variable a mano ni guardar secretos en el proyecto.
+2. Para trabajar en tu computador, que no tiene OIDC, copia el
+   `BLOB_READ_WRITE_TOKEN` desde la pestaña **.env.local** del store a tu
+   archivo `.env.local`. Ese token es solo para desarrollo.
 
 Sin ese token, en desarrollo las fotos se guardan en `public/subidas/` para poder
 probar sin depender de un servicio externo. El mantenedor lo avisa en pantalla.
