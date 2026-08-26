@@ -7,7 +7,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  Phone,
   ScrollText,
   Tag,
 } from "lucide-react";
@@ -15,25 +14,26 @@ import {
 import { Carrusel } from "@/components/landing/carrusel";
 import { estiloBoton } from "@/components/ui/boton";
 import { leerGaleria } from "@/lib/galeria";
+import { cn } from "@/lib/utils";
 
 const BENEFICIOS = [
   {
     Icono: ScrollText,
     titulo: "Derechos y deberes",
     texto:
-      "Conoce tus derechos y deberes como miembro activo del club: participación en asambleas, uso de equipo y compromiso con la seguridad.",
+      "Ser socio no es sólo pagar la cuota. Se espera que participes: en las asambleas, donde se decide el rumbo del club; en las salidas a terreno; y en los talleres, teóricos y prácticos, donde se aprende y también se enseña. A cambio tienes voz y voto, y el equipo del club a tu disposición.",
   },
   {
     Icono: Tag,
     titulo: "Convenios y beneficios",
     texto:
-      "Siendo socio accedes a descuentos en tiendas especializadas, cursos, préstamo de equipo técnico y salidas exclusivas.",
+      "Descuentos en tiendas de montaña y cursos a precio de socio. Y sobre todo, acceso al equipo técnico del club —carpas, sacos, cuerdas, crampones— sin tener que comprarlo: es lo que permite empezar en la montaña sin gastar un sueldo en implementación.",
   },
   {
     Icono: BookOpen,
     titulo: "Archivo Montaña",
     texto:
-      "Tenemos historia, relatos y experiencias compartidas. Encontrarás un mundo en cada cumbre y cada ruta.",
+      "Cada salida deja algo: rutas, fotos, tiempos reales, y el relato honesto de lo que resultó y de lo que no. Ese archivo es la memoria del club, y es lo que permite que quien salga el próximo verano no repita los errores del anterior.",
   },
 ];
 
@@ -184,16 +184,18 @@ export default function PaginaInicio() {
             </svg>
           )}
 
-          <div className="relative mx-auto max-w-3xl px-4 py-24 text-center sm:px-6 sm:py-36">
-            <Image
-              src="/logo.png"
-              alt="Escudo del Club de Montaña Collipulli"
-              width={320}
-              height={320}
-              className="mx-auto mb-6 size-32 object-contain drop-shadow-xl sm:size-40"
-              priority
-            />
+          {/* El escudo va arriba a la derecha, sobre el cielo: centrado tapaba
+              las caras de quienes salen en la foto. */}
+          <Image
+            src="/logo.png"
+            alt="Escudo del Club de Montaña Collipulli"
+            width={320}
+            height={320}
+            className="absolute top-5 right-4 z-10 size-20 object-contain drop-shadow-xl sm:top-8 sm:right-8 sm:size-28 lg:size-32"
+            priority
+          />
 
+          <div className="relative mx-auto max-w-3xl px-4 py-28 text-center sm:px-6 sm:py-36">
             <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide text-white ring-1 ring-white/25 backdrop-blur-sm ring-inset">
               Comunidad de montaña
             </span>
@@ -263,12 +265,20 @@ export default function PaginaInicio() {
               <strong className="font-semibold text-stone-900">
                 sin fines de lucro
               </strong>{" "}
-              que difunde y promueve la práctica del montañismo en sus distintas áreas:
-              senderismo, media y alta montaña, y escalada.
+              que difunde y promueve el montañismo en sus distintas áreas: senderismo,
+              media y alta montaña, y escalada.
             </p>
-            <p className="mt-4 text-lg leading-relaxed text-stone-600">
-              Reunimos a apasionados por la cordillera, fomentando la seguridad, el
-              compañerismo y el respeto por la naturaleza.
+            <p className="mt-5 text-lg leading-relaxed text-pretty text-stone-600">
+              Caminamos la cordillera de La Araucanía. Los faldeos del Tolhuaca, las
+              araucarias de la Reserva Malleco, el Lonquimay cuando el tiempo acompaña.
+              Territorio mapuche, bosque nativo y volcanes que se ven desde el pueblo
+              cualquier mañana despejada.
+            </p>
+            <p className="mt-5 text-lg leading-relaxed text-pretty text-stone-600">
+              Nos mueve la seguridad antes que la cumbre y el compañerismo antes que el
+              récord. Aquí no hay guías ni clientes: hay socios que se enseñan entre
+              ellos, y una cordillera a la que se entra con cuidado y de la que se sale
+              sin dejar rastro.
             </p>
           </div>
         </section>
@@ -285,7 +295,7 @@ export default function PaginaInicio() {
                 Beneficios
               </h2>
               <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-900">
-                ¿Quieres ser socio? Te invitamos a participar
+                Lo que debes saber antes
               </p>
             </div>
 
@@ -312,9 +322,16 @@ export default function PaginaInicio() {
                 Escríbenos y te contamos cómo asociarte, cuánto es la cuota y cuál es la
                 próxima salida.
               </p>
+              {/* Con `cn` y no con una plantilla de texto: la variante trae
+                  `bg-stone-900` y aquí se pide blanco. Concatenando, las dos
+                  clases quedaban en el HTML y ganaba la que el CSS pusiera
+                  después, no la de aquí. `cn` resuelve el conflicto. */}
               <a
                 href="mailto:contacto@clubmontanacollipulli.cl"
-                className={`${estiloBoton("secondary", "md")} text-brand-900 hover:bg-brand-50 mt-5 bg-white`}
+                className={cn(
+                  estiloBoton("secondary", "md"),
+                  "text-brand-900 hover:bg-brand-100 mt-5 bg-white",
+                )}
               >
                 <Mail aria-hidden />
                 Escribir al club
@@ -380,11 +397,13 @@ export default function PaginaInicio() {
                 </li>
                 <li>
                   <a
-                    href="tel:+56912345678"
+                    href="https://www.instagram.com/club_montana_collipulli"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 hover:text-white"
                   >
-                    <Phone className="size-4" aria-hidden />
-                    +56 9 1234 5678
+                    <AtSign className="size-4" aria-hidden />
+                    @club_montana_collipulli
                   </a>
                 </li>
                 <li className="inline-flex items-center gap-2">
@@ -392,19 +411,6 @@ export default function PaginaInicio() {
                   Collipulli, Región de La Araucanía
                 </li>
               </ul>
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-white">Síguenos</p>
-              <a
-                href="https://www.instagram.com/club_montana_collipulli"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm hover:text-white"
-              >
-                <AtSign className="size-4" aria-hidden />
-                Instagram
-              </a>
             </div>
 
             <div className="space-y-3">
