@@ -87,6 +87,8 @@ function Iniciales({ nombre }: { nombre: string }) {
 export default function PaginaInicio() {
   const fotos = leerGaleria();
   const navegacion = NAV.filter((n) => !n.requiereFotos || fotos.length > 0);
+  // La primera de la galería (por eso el prefijo 01-) hace de fondo del hero.
+  const portada = fotos[0];
 
   return (
     <>
@@ -140,26 +142,49 @@ export default function PaginaInicio() {
         {/* -------------------------------- Hero ----------------------------- */}
 
         <section className="bg-brand-950 relative overflow-hidden">
-          {/* Silueta de cordillera dibujada en SVG: sin fotos de archivo y sin
-              un solo kilobyte de imagen que descargar. */}
-          <svg
-            className="text-brand-900/60 absolute inset-x-0 bottom-0 h-56 w-full sm:h-72"
-            viewBox="0 0 1200 300"
-            preserveAspectRatio="none"
-            aria-hidden
-          >
-            <path
-              fill="currentColor"
-              d="M0 300V180l120-70 90 55 110-105 130 120 95-60 125 95 100-75 135 110 95-45 100 75v20z"
-            />
-            <path
-              fill="currentColor"
-              opacity="0.6"
-              d="M0 300V230l150-80 120 70 140-95 130 105 120-65 150 100 130-80 160 115v0z"
-            />
-          </svg>
+          {portada ? (
+            <>
+              {/* La primera foto de la galería hace de fondo. Es la imagen más
+                  pesada de la página: se carga con prioridad para que no aparezca
+                  un rectángulo vacío mientras baja. */}
+              <Image
+                src={portada.src}
+                alt=""
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover"
+              />
+              {/* Doble capa: un velo parejo que apaga la foto y un degradado que
+                  oscurece más arriba y abajo, donde va el texto. Sin esto, el
+                  blanco sobre una foto clara queda ilegible. */}
+              <div className="absolute inset-0 bg-stone-950/55" aria-hidden />
+              <div
+                className="absolute inset-0 bg-linear-to-b from-stone-950/70 via-transparent to-stone-950/80"
+                aria-hidden
+              />
+            </>
+          ) : (
+            /* Sin fotos, se dibuja la cordillera: la portada nunca queda vacía. */
+            <svg
+              className="text-brand-900/60 absolute inset-x-0 bottom-0 h-56 w-full sm:h-72"
+              viewBox="0 0 1200 300"
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              <path
+                fill="currentColor"
+                d="M0 300V180l120-70 90 55 110-105 130 120 95-60 125 95 100-75 135 110 95-45 100 75v20z"
+              />
+              <path
+                fill="currentColor"
+                opacity="0.6"
+                d="M0 300V230l150-80 120 70 140-95 130 105 120-65 150 100 130-80 160 115v0z"
+              />
+            </svg>
+          )}
 
-          <div className="relative mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-28">
+          <div className="relative mx-auto max-w-3xl px-4 py-24 text-center sm:px-6 sm:py-36">
             <Image
               src="/logo.png"
               alt="Escudo del Club de Montaña Collipulli"
@@ -169,7 +194,7 @@ export default function PaginaInicio() {
               priority
             />
 
-            <span className="text-brand-100 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium tracking-wide ring-1 ring-white/15 ring-inset">
+            <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide text-white ring-1 ring-white/25 backdrop-blur-sm ring-inset">
               Comunidad de montaña
             </span>
 
@@ -177,7 +202,7 @@ export default function PaginaInicio() {
               Club de Montaña Collipulli
             </h1>
 
-            <p className="text-brand-100 mx-auto mt-4 max-w-xl text-lg text-pretty">
+            <p className="mx-auto mt-4 max-w-xl text-lg text-pretty text-white/90">
               Difundimos y practicamos el montañismo: senderismo, alta montaña y
               escalada.
             </p>
@@ -197,6 +222,34 @@ export default function PaginaInicio() {
             </div>
           </div>
         </section>
+
+        {/* ------------------------------ Galería ---------------------------- */}
+
+        {/* Va inmediatamente después del hero, antes de cualquier texto: las
+            fotos de la cordillera son lo que convence a alguien de acercarse al
+            club. Fondo oscuro para que continúe visualmente el hero y las fotos
+            resalten. */}
+        {fotos.length > 0 && (
+          <section id="galeria" className="scroll-mt-16 bg-stone-950">
+            <div className="py-16 sm:py-20">
+              <div className="mx-auto mb-8 max-w-6xl px-4 sm:px-6">
+                <h2 className="text-sm font-medium tracking-wide text-white/50 uppercase">
+                  Galería
+                </h2>
+                <p className="mt-2 text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+                  La cordillera, por nuestros ojos
+                </p>
+                <p className="mt-3 max-w-xl text-pretty text-white/70">
+                  Fotografías de nuestras salidas. Arrastra para recorrerlas.
+                </p>
+              </div>
+
+              {/* De borde a borde: el carrusel no se encajona en la columna de
+                  texto, para que las fotos ocupen todo el ancho disponible. */}
+              <Carrusel fotos={fotos} />
+            </div>
+          </section>
+        )}
 
         {/* -------------------------------- Somos ---------------------------- */}
 
@@ -269,28 +322,6 @@ export default function PaginaInicio() {
             </div>
           </div>
         </section>
-
-        {/* ------------------------------ Galería ---------------------------- */}
-
-        {fotos.length > 0 && (
-          <section id="galeria" className="scroll-mt-16 bg-white">
-            <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-              <div className="mb-10 max-w-2xl">
-                <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
-                  Galería
-                </h2>
-                <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-900">
-                  La cordillera, por nuestros ojos
-                </p>
-                <p className="mt-3 text-stone-600">
-                  Fotografías de las salidas del club. Arrastra para recorrerlas.
-                </p>
-              </div>
-
-              <Carrusel fotos={fotos} />
-            </div>
-          </section>
-        )}
 
         {/* ---------------------------- Testimonios -------------------------- */}
 
