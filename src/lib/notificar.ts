@@ -2,11 +2,15 @@ import "server-only";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { db } from "@/db";
-import { notificaciones, usuarios } from "@/db/schema";
+import { notificaciones, tipoNotificacionEnum, usuarios } from "@/db/schema";
 import { CAPACIDADES, type Capacidad } from "./permisos";
 
+/**
+ * Los tipos se derivan del enum del esquema en vez de repetirse a mano: agregar
+ * una categoría nueva a la base la deja disponible aquí sin tocar este archivo.
+ */
 type Aviso = {
-  tipo: "equipo" | "salida" | "cuota" | "sistema";
+  tipo: (typeof tipoNotificacionEnum.enumValues)[number];
   titulo: string;
   mensaje: string;
   enlace?: string;

@@ -4,6 +4,7 @@ import {
   Backpack,
   Bell,
   CheckCheck,
+  FileText,
   Info,
   Mountain,
   Trash2,
@@ -28,6 +29,7 @@ const ICONOS = {
   equipo: Backpack,
   salida: Mountain,
   cuota: Wallet,
+  acta: FileText,
   sistema: Info,
 } as const;
 

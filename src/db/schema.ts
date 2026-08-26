@@ -23,8 +23,17 @@ export const rolEnum = pgEnum("rol", [
   "tesorero",
   "encargado_equipo",
   "comision_tecnica",
+  "secretario",
   "miembro",
 ]);
+
+export const tipoActaEnum = pgEnum("tipo_acta", [
+  "asamblea_ordinaria",
+  "asamblea_extraordinaria",
+  "directiva",
+]);
+
+export const estadoActaEnum = pgEnum("estado_acta", ["borrador", "publicada"]);
 
 export const tipoMiembroEnum = pgEnum("tipo_miembro", ["general", "estudiante"]);
 export const estadoUsuarioEnum = pgEnum("estado_usuario", ["activo", "inactivo"]);
@@ -67,6 +76,7 @@ export const tipoNotificacionEnum = pgEnum("tipo_notificacion", [
   "equipo",
   "salida",
   "cuota",
+  "acta",
   "sistema",
 ]);
 
@@ -249,6 +259,54 @@ export const cuotasMensuales = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/*  Actas de reunión                                                           */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Acta de una reunión del club.
+ *
+ * El cuerpo es texto libre: los asistentes, los temas y los acuerdos se
+ * redactan dentro, como en un libro de actas de papel.
+ *
+ * El número no se calcula, se guarda. Se propone el siguiente del año al crear
+ * una, pero queda editable para poder continuar una numeración que venga de
+ * antes del sistema.
+ */
+export const actas = pgTable(
+  "actas",
+  {
+    id: serial("id").primaryKey(),
+    anio: integer("anio").notNull(),
+    numero: integer("numero").notNull(),
+    tipo: tipoActaEnum("tipo").notNull().default("asamblea_ordinaria"),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    fecha: date("fecha").notNull(),
+    lugar: varchar("lugar", { length: 200 }),
+    cuerpo: text("cuerpo").notNull(),
+    estado: estadoActaEnum("estado").notNull().default("borrador"),
+
+    redactadaPor: integer("redactada_por").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    /** Queda constancia de quién tocó el acta por última vez y cuándo. */
+    actualizadaPor: integer("actualizada_por").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    publicadaEn: timestamp("publicada_en", { withTimezone: true }),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    // No pueden existir dos "Acta N°3 · 2026".
+    unique("acta_numero_unico").on(t.anio, t.numero),
+    index("actas_anio_idx").on(t.anio),
+    index("actas_estado_idx").on(t.estado),
+  ],
+);
+
+/* -------------------------------------------------------------------------- */
 /*  Notificaciones                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -336,3 +394,13 @@ export type Notificacion = typeof notificaciones.$inferSelect;
 
 export type Rol = (typeof rolEnum.enumValues)[number];
 export type TipoMiembro = (typeof tipoMiembroEnum.enumValues)[number];
+
+export const actasRelations = relations(actas, ({ one }) => ({
+  redactor: one(usuarios, {
+    fields: [actas.redactadaPor],
+    references: [usuarios.id],
+  }),
+}));
+
+export type Acta = typeof actas.$inferSelect;
+export type TipoActa = (typeof tipoActaEnum.enumValues)[number];

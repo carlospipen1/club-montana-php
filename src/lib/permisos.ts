@@ -18,6 +18,8 @@ export const CAPACIDADES = {
   gestionarPrestamos: ["admin", "encargado_equipo"],
   /** Publicar y editar salidas. Inscribirse no requiere permiso. */
   gestionarSalidas: ["admin", "comision_tecnica"],
+  /** Redactar y publicar actas. Leerlas no requiere permiso. */
+  gestionarActas: ["admin", "secretario"],
   administrarSistema: ["admin"],
 } as const satisfies Record<string, readonly Rol[]>;
 
@@ -33,6 +35,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   tesorero: "Tesorero",
   encargado_equipo: "Encargado de equipos",
   comision_tecnica: "Comisión técnica",
+  secretario: "Secretario/a",
   miembro: "Socio",
 };
 
@@ -43,5 +46,6 @@ export const DESCRIPCIONES_ROL: Record<Rol, string> = {
   tesorero: "Gestiona las cuotas: habilita años y registra pagos.",
   encargado_equipo: "Administra el inventario y resuelve las solicitudes de préstamo.",
   comision_tecnica: "Publica y edita las salidas del club.",
-  miembro: "Ve salidas e inscribe, solicita equipo y consulta sus cuotas.",
+  secretario: "Redacta y publica las actas de las reuniones.",
+  miembro: "Ve salidas y actas, se inscribe, solicita equipo y consulta sus cuotas.",
 };

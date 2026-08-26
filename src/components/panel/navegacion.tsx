@@ -8,6 +8,7 @@ import {
   Backpack,
   Bell,
   ClipboardCheck,
+  FileText,
   LayoutDashboard,
   Menu,
   Mountain,
@@ -42,6 +43,7 @@ const SECCIONES: { titulo?: string; items: Item[] }[] = [
     titulo: "Club",
     items: [
       { href: "/panel/salidas", etiqueta: "Salidas", Icono: Mountain },
+      { href: "/panel/actas", etiqueta: "Actas", Icono: FileText },
       { href: "/panel/equipos", etiqueta: "Equipos", Icono: Backpack },
       {
         href: "/panel/prestamos",

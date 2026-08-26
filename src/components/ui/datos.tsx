@@ -126,3 +126,14 @@ export function InsigniaEstado({
   const entrada = mapa[valor] ?? { texto: valor, tono: "neutro" as Tono };
   return <Insignia tono={entrada.tono}>{entrada.texto}</Insignia>;
 }
+
+export const TIPO_ACTA: Record<string, { texto: string; tono: Tono }> = {
+  asamblea_ordinaria: { texto: "Asamblea ordinaria", tono: "info" },
+  asamblea_extraordinaria: { texto: "Asamblea extraordinaria", tono: "atencion" },
+  directiva: { texto: "Reunión de directiva", tono: "neutro" },
+};
+
+export const ESTADO_ACTA: Record<string, { texto: string; tono: Tono }> = {
+  borrador: { texto: "Borrador", tono: "atencion" },
+  publicada: { texto: "Publicada", tono: "exito" },
+};
