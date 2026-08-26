@@ -1,0 +1,361 @@
+import Image from "next/image";
+import Link from "next/link";
+import {
+  ArrowRight,
+  AtSign,
+  BookOpen,
+  Lock,
+  Mail,
+  MapPin,
+  Phone,
+  ScrollText,
+  Tag,
+} from "lucide-react";
+
+import { estiloBoton } from "@/components/ui/boton";
+
+const BENEFICIOS = [
+  {
+    Icono: ScrollText,
+    titulo: "Derechos y deberes",
+    texto:
+      "Conoce tus derechos y deberes como miembro activo del club: participación en asambleas, uso de equipo y compromiso con la seguridad.",
+  },
+  {
+    Icono: Tag,
+    titulo: "Convenios y beneficios",
+    texto:
+      "Siendo socio accedes a descuentos en tiendas especializadas, cursos, préstamo de equipo técnico y salidas exclusivas.",
+  },
+  {
+    Icono: BookOpen,
+    titulo: "Archivo Montaña",
+    texto:
+      "Tenemos historia, relatos y experiencias compartidas. Encontrarás un mundo en cada cumbre y cada ruta.",
+  },
+];
+
+const TESTIMONIOS = [
+  {
+    texto:
+      "He logrado cumbres que jamás pensé que podría subir. Encantado de participar con un gran equipo de compañeros.",
+    nombre: "Rodrigo Sanhueza",
+    detalle: "Socio desde 2019",
+  },
+  {
+    texto:
+      "En los cursos y talleres me han enseñado nuevas técnicas y el uso adecuado de los implementos deportivos.",
+    nombre: "Camila Martínez",
+    detalle: "Socia desde 2021",
+  },
+  {
+    texto:
+      "El compañerismo nos ayuda a trabajar con seguridad, haciendo del montañismo una opción de vida.",
+    nombre: "Fernando Antilef",
+    detalle: "Socio fundador",
+  },
+];
+
+const NAV = [
+  { href: "#somos", etiqueta: "Somos" },
+  { href: "#beneficios", etiqueta: "Beneficios" },
+  { href: "#testimonios", etiqueta: "Experiencias" },
+  { href: "#contacto", etiqueta: "Contacto" },
+];
+
+function Iniciales({ nombre }: { nombre: string }) {
+  const iniciales = nombre
+    .split(" ")
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("");
+
+  return (
+    <span
+      aria-hidden
+      className="bg-brand-100 text-brand-800 flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+    >
+      {iniciales}
+    </span>
+  );
+}
+
+export default function PaginaInicio() {
+  return (
+    <>
+      {/* ------------------------------ Cabecera ----------------------------- */}
+
+      <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={40}
+              height={40}
+              className="size-9 rounded-lg object-contain"
+              priority
+            />
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold tracking-tight text-stone-900">
+                Club de Montaña Collipulli
+              </span>
+              <span className="block text-xs text-stone-500">
+                Región de La Araucanía
+              </span>
+            </span>
+          </Link>
+
+          <nav className="ml-auto hidden items-center gap-7 md:flex">
+            {NAV.map((n) => (
+              <a
+                key={n.href}
+                href={n.href}
+                className="text-sm text-stone-600 transition-colors hover:text-stone-900"
+              >
+                {n.etiqueta}
+              </a>
+            ))}
+          </nav>
+
+          <Link
+            href="/login"
+            className={`${estiloBoton("outline", "sm")} ml-auto md:ml-0`}
+          >
+            <Lock aria-hidden />
+            <span className="hidden sm:inline">Acceso socios</span>
+            <span className="sm:hidden">Entrar</span>
+          </Link>
+        </div>
+      </header>
+
+      <main className="flex-1">
+        {/* -------------------------------- Hero ----------------------------- */}
+
+        <section className="bg-brand-950 relative overflow-hidden">
+          {/* Silueta de cordillera dibujada en SVG: sin fotos de archivo y sin
+              un solo kilobyte de imagen que descargar. */}
+          <svg
+            className="text-brand-900/60 absolute inset-x-0 bottom-0 h-56 w-full sm:h-72"
+            viewBox="0 0 1200 300"
+            preserveAspectRatio="none"
+            aria-hidden
+          >
+            <path
+              fill="currentColor"
+              d="M0 300V180l120-70 90 55 110-105 130 120 95-60 125 95 100-75 135 110 95-45 100 75v20z"
+            />
+            <path
+              fill="currentColor"
+              opacity="0.6"
+              d="M0 300V230l150-80 120 70 140-95 130 105 120-65 150 100 130-80 160 115v0z"
+            />
+          </svg>
+
+          <div className="relative mx-auto max-w-3xl px-4 py-24 text-center sm:px-6 sm:py-32">
+            <span className="text-brand-100 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium tracking-wide ring-1 ring-white/15 ring-inset">
+              Comunidad de montaña
+            </span>
+
+            <h1 className="mt-5 text-4xl font-semibold tracking-tight text-balance text-white sm:text-5xl">
+              Club de Montaña Collipulli
+            </h1>
+
+            <p className="text-brand-100 mx-auto mt-4 max-w-xl text-lg text-pretty">
+              Difundimos y practicamos el montañismo: senderismo, alta montaña y
+              escalada.
+            </p>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              <a href="#somos" className={estiloBoton("secondary", "lg")}>
+                Conócenos
+                <ArrowRight aria-hidden />
+              </a>
+              <Link
+                href="/login"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-white/25 px-6 text-base font-medium text-white transition-colors hover:bg-white/10 [&_svg]:size-4"
+              >
+                <Lock aria-hidden />
+                Intranet de socios
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* -------------------------------- Somos ---------------------------- */}
+
+        <section id="somos" className="scroll-mt-16 bg-white">
+          <div className="mx-auto max-w-3xl px-4 py-20 sm:px-6">
+            <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
+              Somos
+            </h2>
+            <p className="mt-4 text-xl leading-relaxed text-pretty text-stone-700">
+              El Club de Montaña Collipulli es una organización deportiva{" "}
+              <strong className="font-semibold text-stone-900">
+                sin fines de lucro
+              </strong>{" "}
+              que difunde y promueve la práctica del montañismo en sus distintas áreas:
+              senderismo, media y alta montaña, y escalada.
+            </p>
+            <p className="mt-4 text-lg leading-relaxed text-stone-600">
+              Reunimos a apasionados por la cordillera, fomentando la seguridad, el
+              compañerismo y el respeto por la naturaleza.
+            </p>
+          </div>
+        </section>
+
+        {/* ----------------------------- Beneficios -------------------------- */}
+
+        <section
+          id="beneficios"
+          className="scroll-mt-16 border-y border-stone-200 bg-stone-50"
+        >
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <div className="max-w-2xl">
+              <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
+                Beneficios
+              </h2>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-900">
+                ¿Quieres ser socio? Te invitamos a participar
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {BENEFICIOS.map(({ Icono, titulo, texto }) => (
+                <div
+                  key={titulo}
+                  className="rounded-xl border border-stone-200 bg-white p-6"
+                >
+                  <span className="bg-brand-50 text-brand-700 flex size-10 items-center justify-center rounded-lg">
+                    <Icono className="size-5" aria-hidden />
+                  </span>
+                  <h3 className="mt-4 font-semibold text-stone-900">{titulo}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-stone-600">{texto}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-brand-800 mt-10 rounded-xl px-6 py-8 text-center sm:px-10">
+              <p className="text-lg font-medium text-white">
+                ¿Te interesa sumarte al club?
+              </p>
+              <p className="text-brand-100 mx-auto mt-2 max-w-xl text-sm">
+                Escríbenos y te contamos cómo asociarte, cuánto es la cuota y cuál es la
+                próxima salida.
+              </p>
+              <a
+                href="mailto:contacto@clubmontanacollipulli.cl"
+                className={`${estiloBoton("secondary", "md")} text-brand-900 hover:bg-brand-50 mt-5 bg-white`}
+              >
+                <Mail aria-hidden />
+                Escribir al club
+              </a>
+            </div>
+          </div>
+        </section>
+
+        {/* ---------------------------- Testimonios -------------------------- */}
+
+        <section id="testimonios" className="scroll-mt-16 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
+              Experiencias
+            </h2>
+            <p className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-balance text-stone-900">
+              La experiencia en el club
+            </p>
+
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
+              {TESTIMONIOS.map((t) => (
+                <figure
+                  key={t.nombre}
+                  className="flex flex-col rounded-xl border border-stone-200 bg-stone-50/70 p-6"
+                >
+                  <blockquote className="flex-1 text-stone-700">
+                    <p className="text-pretty">«{t.texto}»</p>
+                  </blockquote>
+                  <figcaption className="mt-5 flex items-center gap-3 border-t border-stone-200 pt-4">
+                    <Iniciales nombre={t.nombre} />
+                    <span>
+                      <span className="block text-sm font-semibold text-stone-900">
+                        {t.nombre}
+                      </span>
+                      <span className="block text-xs text-stone-500">{t.detalle}</span>
+                    </span>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ------------------------------- Footer ------------------------------ */}
+
+      <footer id="contacto" className="bg-brand-950 text-brand-100 scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+          <div className="flex flex-wrap justify-between gap-10">
+            <div className="space-y-3">
+              <p className="text-lg font-semibold text-white">
+                Club de Montaña Collipulli
+              </p>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    href="mailto:contacto@clubmontanacollipulli.cl"
+                    className="inline-flex items-center gap-2 hover:text-white"
+                  >
+                    <Mail className="size-4" aria-hidden />
+                    contacto@clubmontanacollipulli.cl
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="tel:+56912345678"
+                    className="inline-flex items-center gap-2 hover:text-white"
+                  >
+                    <Phone className="size-4" aria-hidden />
+                    +56 9 1234 5678
+                  </a>
+                </li>
+                <li className="inline-flex items-center gap-2">
+                  <MapPin className="size-4" aria-hidden />
+                  Collipulli, Región de La Araucanía
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-white">Síguenos</p>
+              <a
+                href="https://instagram.com/clubmontanacollipulli"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm hover:text-white"
+              >
+                <AtSign className="size-4" aria-hidden />
+                Instagram
+              </a>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-white">Socios</p>
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 text-sm hover:text-white"
+              >
+                <Lock className="size-4" aria-hidden />
+                Entrar a la intranet
+              </Link>
+            </div>
+          </div>
+
+          <p className="text-brand-200/70 mt-12 border-t border-white/10 pt-6 text-center text-xs">
+            © {new Date().getFullYear()} Club de Montaña Collipulli · Difundiendo la
+            montaña
+          </p>
+        </div>
+      </footer>
+    </>
+  );
+}

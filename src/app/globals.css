@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Sistema de diseño del Club de Montaña.
+
+   Una sola definición de color, tipografía y espaciado para todo el sitio. En
+   el sistema anterior cada archivo .php traía su propio bloque <style> con los
+   colores copiados a mano, y cambiar un tono significaba editar veinte archivos.
+   --------------------------------------------------------------------------- */
+
+@theme {
+  /* Azul de montaña, derivado del color corporativo original (#2c5aa0). */
+  --color-brand-50: #eff6fb;
+  --color-brand-100: #d8e9f5;
+  --color-brand-200: #b3d1ea;
+  --color-brand-300: #82b2da;
+  --color-brand-400: #4d8dc4;
+  --color-brand-500: #2c6ea8;
+  --color-brand-600: #1e5389;
+  --color-brand-700: #1a436e;
+  --color-brand-800: #19395c;
+  --color-brand-900: #18314d;
+  --color-brand-950: #0f1f33;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Anillo de foco visible y consistente: accesibilidad por defecto,
+     no como algo que se agrega al final. */
+  :focus-visible {
+    @apply outline-brand-600 outline-2 outline-offset-2;
+  }
+
+  /* Los números de montos y fechas no deben "bailar" al actualizarse. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
