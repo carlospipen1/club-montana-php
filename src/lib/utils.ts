@@ -109,3 +109,19 @@ export function paraInputFechaHora(fecha: Date | string | null): string {
   // "sv-SE" entrega "2026-03-12 08:30"; el input necesita la T.
   return partes.replace(" ", "T");
 }
+
+/**
+ * Días completos de atraso respecto a una fecha "YYYY-MM-DD".
+ * Devuelve 0 si la fecha es hoy o está en el futuro.
+ *
+ * Compara cadenas de fecha en vez de objetos Date para no arrastrar la hora:
+ * un préstamo que vence "el 12" está atrasado desde el 13 a las 00:00 en Chile,
+ * sin importar en qué zona horaria corra el servidor.
+ */
+export function diasDeAtraso(fechaHasta: string): number {
+  const hoy = hoyISO();
+  if (fechaHasta >= hoy) return 0;
+
+  const ms = Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${fechaHasta}T00:00:00Z`);
+  return Math.round(ms / 86_400_000);
+}

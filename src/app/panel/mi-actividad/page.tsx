@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { Activity, Backpack, Mountain, Wallet } from "lucide-react";
+import { Activity, AlarmClock, Backpack, Mountain, Wallet } from "lucide-react";
 
 import { db } from "@/db";
 import {
@@ -10,7 +10,13 @@ import {
   salidas,
 } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
-import { formatearCLP, formatearFecha, formatearFechaHora, MESES } from "@/lib/utils";
+import {
+  diasDeAtraso,
+  formatearCLP,
+  formatearFecha,
+  formatearFechaHora,
+  MESES,
+} from "@/lib/utils";
 import {
   DIFICULTAD,
   ESTADO_CUOTA,
@@ -212,7 +218,14 @@ export default async function PaginaMiActividad() {
                     )}
                   </Td>
                   <Td>
-                    <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={p.estado} />
+                    {p.estado === "aprobado" && diasDeAtraso(p.fechaHasta) > 0 ? (
+                      <Insignia tono="alerta">
+                        <AlarmClock className="size-3" aria-hidden />
+                        Devolución vencida
+                      </Insignia>
+                    ) : (
+                      <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={p.estado} />
+                    )}
                   </Td>
                 </Fila>
               ))}
