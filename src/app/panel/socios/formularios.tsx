@@ -14,9 +14,9 @@ import { useModalAccion } from "@/components/ui/usar-modal-accion";
 import { Aviso } from "@/components/ui/avisos";
 import { Boton } from "@/components/ui/boton";
 import { Campo, Input, Selector } from "@/components/ui/campos";
-import { ETIQUETAS_ROL } from "@/lib/permisos";
+import { DESCRIPCIONES_ROL, ETIQUETAS_ROL } from "@/lib/permisos";
 import { formatearRut } from "@/lib/rut";
-import type { Usuario } from "@/db/schema";
+import type { Rol, Usuario } from "@/db/schema";
 
 /* -------------------------------------------------------------------------- */
 /*  Contraseña temporal                                                        */
@@ -61,6 +61,7 @@ function PasswordTemporal({ email, password }: { email: string; password: string
 const ROLES = [
   "miembro",
   "encargado_equipo",
+  "comision_tecnica",
   "tesorero",
   "presidente",
   "admin",
@@ -76,6 +77,7 @@ function CamposSocio({
   valores?: EstadoFormulario["valores"];
 }) {
   const [rut, setRut] = useState(valores?.rut ?? socio?.rut ?? "");
+  const [rol, setRol] = useState<Rol>((valores?.rol as Rol) ?? socio?.rol ?? "miembro");
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -156,16 +158,12 @@ function CamposSocio({
         </Selector>
       </Campo>
 
-      <Campo
-        id="rol"
-        etiqueta="Rol"
-        ayuda="Define a qué secciones tiene acceso."
-        requerido
-      >
+      <Campo id="rol" etiqueta="Rol" ayuda={DESCRIPCIONES_ROL[rol]} requerido>
         <Selector
           id="rol"
           name="rol"
-          defaultValue={valores?.rol ?? socio?.rol ?? "miembro"}
+          value={rol}
+          onChange={(e) => setRol(e.target.value as Rol)}
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>

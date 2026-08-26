@@ -1,0 +1,1 @@
+ALTER TYPE "public"."rol" ADD VALUE 'comision_tecnica' BEFORE 'miembro';

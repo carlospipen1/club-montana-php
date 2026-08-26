@@ -9,12 +9,15 @@ import type { Rol } from "@/db/schema";
  * por la capacidad, nunca por el rol.
  */
 export const CAPACIDADES = {
-  verSocios: ["admin", "presidente", "tesorero"],
-  gestionarSocios: ["admin", "presidente"],
-  gestionarCuotas: ["admin", "presidente", "tesorero"],
-  gestionarEquipos: ["admin", "presidente", "encargado_equipo"],
-  gestionarPrestamos: ["admin", "presidente", "encargado_equipo"],
-  gestionarSalidas: ["admin", "presidente"],
+  /** El registro de socios trae datos personales y de emergencia. */
+  verSocios: ["admin"],
+  gestionarSocios: ["admin"],
+  gestionarCuotas: ["admin", "tesorero"],
+  /** Alta, edición y baja del inventario. Pedir prestado no requiere permiso. */
+  gestionarEquipos: ["admin", "encargado_equipo"],
+  gestionarPrestamos: ["admin", "encargado_equipo"],
+  /** Publicar y editar salidas. Inscribirse no requiere permiso. */
+  gestionarSalidas: ["admin", "comision_tecnica"],
   administrarSistema: ["admin"],
 } as const satisfies Record<string, readonly Rol[]>;
 
@@ -29,5 +32,16 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   presidente: "Presidente",
   tesorero: "Tesorero",
   encargado_equipo: "Encargado de equipos",
+  comision_tecnica: "Comisión técnica",
   miembro: "Socio",
+};
+
+/** Qué hace cada rol, para orientar a quien crea un socio. */
+export const DESCRIPCIONES_ROL: Record<Rol, string> = {
+  admin: "Acceso completo, incluida la administración del sistema.",
+  presidente: "Sin atribuciones de gestión: los mismos accesos que un socio.",
+  tesorero: "Gestiona las cuotas: habilita años y registra pagos.",
+  encargado_equipo: "Administra el inventario y resuelve las solicitudes de préstamo.",
+  comision_tecnica: "Publica y edita las salidas del club.",
+  miembro: "Ve salidas e inscribe, solicita equipo y consulta sus cuotas.",
 };

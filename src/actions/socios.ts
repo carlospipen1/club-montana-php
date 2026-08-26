@@ -35,7 +35,14 @@ const esquemaSocio = z.object({
   rut: rutValido,
   telefono: opcional(z.string().trim().max(30)),
   tipoMiembro: z.enum(["general", "estudiante"]),
-  rol: z.enum(["admin", "presidente", "tesorero", "encargado_equipo", "miembro"]),
+  rol: z.enum([
+    "admin",
+    "presidente",
+    "tesorero",
+    "encargado_equipo",
+    "comision_tecnica",
+    "miembro",
+  ]),
   fechaIngreso: opcional(z.string().trim()),
 });
 

@@ -8,6 +8,13 @@
       "when": 1787754736620,
       "tag": "0000_careful_korvac",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787759353315,
+      "tag": "0001_sudden_plazm",
+      "breakpoints": true
     }
   ]
 }

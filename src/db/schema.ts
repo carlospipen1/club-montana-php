@@ -22,6 +22,7 @@ export const rolEnum = pgEnum("rol", [
   "presidente",
   "tesorero",
   "encargado_equipo",
+  "comision_tecnica",
   "miembro",
 ]);
 
