@@ -4,7 +4,12 @@ import { join } from "node:path";
 
 export type Foto = { src: string; alt: string };
 
-const EXTENSIONES = /\.(jpe?g|png|webp|avif)$/i;
+/**
+ * El `+` final no sobra: Windows suele dejar nombres con la extensión repetida
+ * —`foto.jpg.jpeg`— al guardar desde el navegador o al renombrar con la
+ * extensión oculta. Sin esto, el sobrante terminaba dentro del pie de foto.
+ */
+const EXTENSIONES = /(\.(jpe?g|png|webp|avif))+$/i;
 
 /**
  * Fotos de la galería, leídas de `public/galeria/`.
