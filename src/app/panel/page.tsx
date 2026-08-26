@@ -3,13 +3,7 @@ import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { Backpack, Bell, Mountain, TriangleAlert, Wallet } from "lucide-react";
 
 import { db } from "@/db";
-import {
-  cuotasMensuales,
-  inscripciones,
-  notificaciones,
-  prestamos,
-  salidas,
-} from "@/db/schema";
+import { cuotasMensuales, notificaciones, prestamos, salidas } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { formatearCLP, formatearFecha, MESES, tiempoRelativo } from "@/lib/utils";
 import { BotonEnlace } from "@/components/ui/boton";
@@ -40,14 +34,18 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
           fechaSalida: salidas.fechaSalida,
           nivelDificultad: salidas.nivelDificultad,
           cupoMaximo: salidas.cupoMaximo,
+          // Los nombres van escritos completos: interpolando las columnas del
+          // esquema, Drizzle las emite sin calificar y dentro de la subconsulta
+          // `salida_id = id` se resuelve como `inscripciones.salida_id =
+          // inscripciones.id`. El conteo salía mal sin dar error.
           inscritos: sql<number>`(
-            select count(*)::int from ${inscripciones}
-            where ${inscripciones.salidaId} = ${salidas.id}
+            select count(*)::int from inscripciones
+            where inscripciones.salida_id = salidas.id
           )`,
           yaInscrito: sql<boolean>`exists (
-            select 1 from ${inscripciones}
-            where ${inscripciones.salidaId} = ${salidas.id}
-              and ${inscripciones.usuarioId} = ${usuario.id}
+            select 1 from inscripciones
+            where inscripciones.salida_id = salidas.id
+              and inscripciones.usuario_id = ${usuario.id}
           )`,
         })
         .from(salidas)

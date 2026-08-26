@@ -20,6 +20,8 @@ export const CAPACIDADES = {
   gestionarSalidas: ["admin", "comision_tecnica"],
   /** Redactar y publicar actas. Leerlas no requiere permiso. */
   gestionarActas: ["admin", "secretario"],
+  /** Álbumes, fotos y qué aparece en la portada. */
+  gestionarGaleria: ["admin"],
   administrarSistema: ["admin"],
 } as const satisfies Record<string, readonly Rol[]>;
 

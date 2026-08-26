@@ -9,6 +9,7 @@ import {
   Bell,
   ClipboardCheck,
   FileText,
+  Images,
   LayoutDashboard,
   Menu,
   Mountain,
@@ -44,6 +45,12 @@ const SECCIONES: { titulo?: string; items: Item[] }[] = [
     items: [
       { href: "/panel/salidas", etiqueta: "Salidas", Icono: Mountain },
       { href: "/panel/actas", etiqueta: "Actas", Icono: FileText },
+      {
+        href: "/panel/galeria",
+        etiqueta: "Galería",
+        Icono: Images,
+        requiere: "gestionarGaleria",
+      },
       { href: "/panel/equipos", etiqueta: "Equipos", Icono: Backpack },
       {
         href: "/panel/prestamos",

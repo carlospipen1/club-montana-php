@@ -33,14 +33,16 @@ export default async function PaginaSalidas() {
   const lista = await db
     .select({
       salida: salidas,
+      // Nombres completos y no interpolados: ver la nota en `panel/page.tsx`.
+      // Interpolados, la correlación compara la tabla interna consigo misma.
       inscritos: sql<number>`(
-        select count(*)::int from ${inscripciones}
-        where ${inscripciones.salidaId} = ${salidas.id}
+        select count(*)::int from inscripciones
+        where inscripciones.salida_id = salidas.id
       )`,
       miInscripcionId: sql<number | null>`(
-        select ${inscripciones.id} from ${inscripciones}
-        where ${inscripciones.salidaId} = ${salidas.id}
-          and ${inscripciones.usuarioId} = ${usuario.id}
+        select inscripciones.id from inscripciones
+        where inscripciones.salida_id = salidas.id
+          and inscripciones.usuario_id = ${usuario.id}
         limit 1
       )`,
     })

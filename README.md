@@ -4,7 +4,8 @@ Sitio público e intranet de socios del Club de Montaña Collipulli.
 
 Reescritura completa del sistema anterior en PHP. Mantiene las mismas reglas de
 negocio (socios, cuotas, equipos, préstamos, salidas, notificaciones) sobre una
-base técnica que se puede desplegar, mantener y auditar.
+base técnica que se puede desplegar, mantener y auditar, y suma lo que el club
+fue pidiendo después: actas de reunión y una galería de fotos con mantenedor.
 
 ## Stack
 
@@ -73,12 +74,44 @@ Abre <http://localhost:3000>. La intranet está en `/login`.
 3. En **Settings → Environment Variables**, agrega para *Production*:
    - `DATABASE_URL`
    - `AUTH_SECRET`
-   - `NEXT_PUBLIC_SITE_URL` (por ejemplo `https://clubmontanacollipulli.cl`)
+   - `NEXT_PUBLIC_SITE_URL` (por ejemplo `https://club-montana.vercel.app`)
+   - `BLOB_READ_WRITE_TOKEN` (ver "La galería", más abajo)
 4. **Deploy**.
 
 Las migraciones se aplican desde tu computador con `npm run db:migrate` apuntando
 a la `DATABASE_URL` de producción. No corren solas en el despliegue: así un error
 de esquema nunca tumba el sitio en vivo.
+
+## La galería
+
+Las fotos no viven en el repositorio: se suben desde la intranet y se guardan en
+**Vercel Blob**. Con unas diez fotos por salida y una salida al mes, comprimidas
+a unos 300 KB, son 36 MB al año: el plan gratuito alcanza para muchos años.
+
+### Activarla
+
+1. En Vercel: **Storage** -> **Create** -> **Blob**, y conéctalo al proyecto.
+2. Copia el `BLOB_READ_WRITE_TOKEN` que te entrega a `.env.local` y a las
+   variables de entorno del proyecto en Vercel.
+
+Sin ese token, en desarrollo las fotos se guardan en `public/subidas/` para poder
+probar sin depender de un servicio externo. El mantenedor lo avisa en pantalla.
+Ojo que la base de datos es la misma en local y en producción, así que una foto
+subida así queda registrada con una URL que el sitio publicado no tiene.
+
+### Cómo funciona
+
+- Un **álbum** por salida, con su título, fecha y lugar. Nace como borrador y no
+  se ve en el sitio hasta que se publica.
+- Las fotos se **reducen en el navegador** antes de subirse: de los 4 MB que trae
+  el celular a unos 300 KB, sin pérdida visible en pantalla.
+- Se suben **de a una**, en fila, para no rozar el tope de tamaño de petición de
+  Vercel y poder mostrar el avance real.
+- Tres marcas deciden dónde aparece cada foto: **portada del sitio** (una sola en
+  todo el sistema, es el fondo del hero), **en el carrusel** (hasta 12) y
+  **portada del álbum** (una por álbum).
+- Si no hay ninguna portada elegida se usa la primera del carrusel; y si no hay
+  carrusel, la portada dibuja una cordillera. Nunca queda rota.
 
 ## Comandos
 
@@ -98,22 +131,27 @@ de esquema nunca tumba el sitio en vivo.
 ```
 src/
   app/
-    page.tsx              Sitio público (estático)
+    (sitio)/              Sitio público: comparte cabecera y pie
+      page.tsx            Portada
+      galeria/            Álbumes y visor de fotos
     login/                Ingreso a la intranet
     panel/                Intranet — todo lo de aquí exige sesión
-      socios/  cuotas/  equipos/  prestamos/
-      salidas/  notificaciones/  mi-actividad/
+      socios/  cuotas/  equipos/  prestamos/  salidas/
+      actas/  galeria/  notificaciones/  mi-actividad/
       perfil/  admin/
   actions/                Server Actions: toda la escritura pasa por aquí
   components/ui/          Sistema de diseño (botones, campos, tablas, modales)
   components/panel/       Armazón de la intranet
+  components/landing/     Cabecera, pie, carrusel y visor del sitio público
   db/
-    schema.ts             Definición de las 8 tablas
+    schema.ts             Definición de las 11 tablas
     seed.ts               Creación del primer administrador
   lib/
     auth.ts               Sesión y control de acceso
     permisos.ts           Capacidades por rol
     rut.ts                Validación de RUT chileno (módulo 11)
+    almacenamiento.ts     Vercel Blob en producción, disco local en desarrollo
+    consultas-galeria.ts  Lecturas públicas de álbumes y fotos
   proxy.ts                Portero de /panel/* en el edge
 drizzle/                  Migraciones SQL versionadas
 legacy/                   Sistema PHP anterior — sólo referencia, se puede borrar
@@ -124,18 +162,26 @@ legacy/                   Sistema PHP anterior — sólo referencia, se puede bo
 Los permisos se declaran **por capacidad**, no por rol, en `src/lib/permisos.ts`.
 Las pantallas preguntan por la capacidad; ninguna comprueba el rol a mano.
 
-| Capacidad            | admin | presidente | tesorero | encargado_equipo | miembro |
-| -------------------- | :---: | :--------: | :------: | :--------------: | :-----: |
-| `verSocios`          |  ✓    |     ✓      |    ✓     |                  |         |
-| `gestionarSocios`    |  ✓    |     ✓      |          |                  |         |
-| `gestionarCuotas`    |  ✓    |     ✓      |    ✓     |                  |         |
-| `gestionarEquipos`   |  ✓    |     ✓      |          |        ✓         |         |
-| `gestionarPrestamos` |  ✓    |     ✓      |          |        ✓         |         |
-| `gestionarSalidas`   |  ✓    |     ✓      |          |                  |         |
-| `administrarSistema` |  ✓    |            |          |                  |         |
+| Capacidad            | admin | tesorero | encargado_equipo | comision_tecnica | secretario |
+| -------------------- | :---: | :------: | :--------------: | :--------------: | :--------: |
+| `verSocios`          |  ✓    |          |                  |                  |            |
+| `gestionarSocios`    |  ✓    |          |                  |                  |            |
+| `gestionarCuotas`    |  ✓    |    ✓     |                  |                  |            |
+| `gestionarEquipos`   |  ✓    |          |        ✓         |                  |            |
+| `gestionarPrestamos` |  ✓    |          |        ✓         |                  |            |
+| `gestionarSalidas`   |  ✓    |          |                  |        ✓         |            |
+| `gestionarActas`     |  ✓    |          |                  |                  |     ✓      |
+| `gestionarGaleria`   |  ✓    |          |                  |                  |            |
+| `administrarSistema` |  ✓    |          |                  |                  |            |
 
-Todo socio activo puede, además: ver salidas e inscribirse, solicitar equipo,
-consultar sus cuotas, y editar su perfil y contacto de emergencia.
+Los roles **presidente** y **miembro** no aparecen en la tabla porque no tienen
+ninguna capacidad de gestión: el club decidió que la presidencia no administra el
+sistema.
+
+Lo que puede **cualquier socio activo**, sin permiso especial: ver las salidas e
+inscribirse, solicitar equipo prestado, leer las actas publicadas, consultar sus
+cuotas y editar su perfil y contacto de emergencia. Las columnas de la tabla son
+sólo la administración, no la participación.
 
 ## Notas de seguridad
 
@@ -161,11 +207,15 @@ Cada punto corresponde a un problema real del sistema anterior:
 
 ## Pendientes conocidos
 
-- El correo de contacto y el teléfono de la landing son los del sistema anterior;
-  hay que confirmarlos.
-- Los testimonios conservan el texto original. Falta reemplazarlos por fotos y
-  citas reales si el club las tiene.
+- Los tres testimonios de la portada conservan el texto del sitio anterior. Es lo
+  último que queda de relleno.
 - `public/logo.png` pesa 1,9 MB. Lo sirve `next/image` optimizado, pero conviene
   reemplazarlo por una versión de ~50 KB.
 - No hay envío de correos: las notificaciones viven dentro de la intranet. Si se
-  quiere avisar por mail, el siguiente paso natural es Resend.
+  quiere avisar por mail, el siguiente paso natural es Resend. Sin eso, la
+  contraseña de un socio nuevo hay que entregársela en persona y no existe un
+  "olvidé mi contraseña" que no pase por el administrador.
+- No hay límite de intentos en el ingreso. Para un club chico el riesgo es bajo,
+  pero es una puerta abierta a probar contraseñas por fuerza bruta.
+- Al reordenar fotos de un álbum se reescribe el orden de todas. Con diez fotos
+  no se nota; con doscientas habría que pasar a arrastrar y guardar una sola vez.

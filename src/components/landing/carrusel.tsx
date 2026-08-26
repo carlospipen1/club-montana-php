@@ -4,8 +4,10 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-import type { Foto } from "@/lib/galeria";
 import { cn } from "@/lib/utils";
+
+/** Una foto del carrusel: la URL y su descripción, que hace de pie. */
+export type FotoCarrusel = { src: string; alt: string };
 
 /**
  * Ancho de cada foto. Deja asomando la siguiente, que es lo que le dice a
@@ -24,7 +26,7 @@ const ANCHO_FOTO = "w-[88%] sm:w-[74%] lg:w-[62%]";
  * No avanza solo: una foto que cambia sin aviso molesta a quien está leyendo y
  * complica a quien navega con teclado.
  */
-export function Carrusel({ fotos }: { fotos: Foto[] }) {
+export function Carrusel({ fotos }: { fotos: FotoCarrusel[] }) {
   const pista = useRef<HTMLUListElement>(null);
   const [activa, setActiva] = useState(0);
 

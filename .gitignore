@@ -44,3 +44,9 @@ next-env.d.ts
 # Sistema PHP anterior: material de referencia local, no se publica.
 # Contiene credenciales en texto plano y un SQLite con datos de socios.
 legacy/
+
+# Fotos subidas en desarrollo (en producción viven en Vercel Blob)
+/public/subidas
+
+# Fotos a la espera de subirse por el mantenedor
+/fotos-para-subir

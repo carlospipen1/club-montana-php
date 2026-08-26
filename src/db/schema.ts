@@ -35,6 +35,8 @@ export const tipoActaEnum = pgEnum("tipo_acta", [
 
 export const estadoActaEnum = pgEnum("estado_acta", ["borrador", "publicada"]);
 
+export const estadoAlbumEnum = pgEnum("estado_album", ["borrador", "publicado"]);
+
 export const tipoMiembroEnum = pgEnum("tipo_miembro", ["general", "estudiante"]);
 export const estadoUsuarioEnum = pgEnum("estado_usuario", ["activo", "inactivo"]);
 
@@ -305,6 +307,86 @@ export const actas = pgTable(
     index("actas_estado_idx").on(t.estado),
   ],
 );
+
+/* -------------------------------------------------------------------------- */
+/*  Galería                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Un álbum de fotos, normalmente el de una salida.
+ *
+ * A propósito no está atado a la tabla `salidas`: también se arman álbumes de
+ * talleres, asambleas o aniversarios, y no se quiere obligar a inventar una
+ * salida para poder publicar fotos.
+ */
+export const albumes = pgTable(
+  "albumes",
+  {
+    id: serial("id").primaryKey(),
+    titulo: varchar("titulo", { length: 150 }).notNull(),
+    fecha: date("fecha").notNull(),
+    lugar: varchar("lugar", { length: 200 }),
+    descripcion: text("descripcion"),
+    estado: estadoAlbumEnum("estado").notNull().default("borrador"),
+    creadoPor: integer("creado_por").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("albumes_estado_fecha_idx").on(t.estado, t.fecha)],
+);
+
+/**
+ * Una foto pertenece siempre a un álbum. Dónde aparece en el sitio lo deciden
+ * tres marcas, en vez de duplicar el archivo en colecciones separadas:
+ *
+ *   - `esPortadaSitio`  una sola en todo el sistema: el fondo del hero.
+ *   - `enCarrusel`      hasta el tope definido en el mantenedor.
+ *   - `esPortadaAlbum`  una por álbum, la que representa al álbum en la grilla.
+ *
+ * `rutaAlmacenamiento` guarda la ruta interna del proveedor —no la URL pública—
+ * porque es lo que se necesita para borrar el archivo cuando se borra la foto.
+ */
+export const fotos = pgTable(
+  "fotos",
+  {
+    id: serial("id").primaryKey(),
+    albumId: integer("album_id")
+      .notNull()
+      .references(() => albumes.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    rutaAlmacenamiento: text("ruta_almacenamiento"),
+    /** Texto alternativo y pie de foto. Opcional, pero el mantenedor lo reclama. */
+    pie: varchar("pie", { length: 300 }),
+    ancho: integer("ancho"),
+    alto: integer("alto"),
+    orden: integer("orden").notNull().default(0),
+
+    esPortadaAlbum: boolean("es_portada_album").notNull().default(false),
+    enCarrusel: boolean("en_carrusel").notNull().default(false),
+    esPortadaSitio: boolean("es_portada_sitio").notNull().default(false),
+
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("fotos_album_orden_idx").on(t.albumId, t.orden),
+    index("fotos_carrusel_idx").on(t.enCarrusel),
+  ],
+);
+
+export const albumesRelations = relations(albumes, ({ many }) => ({
+  fotos: many(fotos),
+}));
+
+export const fotosRelations = relations(fotos, ({ one }) => ({
+  album: one(albumes, { fields: [fotos.albumId], references: [albumes.id] }),
+}));
+
+export type Album = typeof albumes.$inferSelect;
+export type Foto = typeof fotos.$inferSelect;
 
 /* -------------------------------------------------------------------------- */
 /*  Notificaciones                                                             */
