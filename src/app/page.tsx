@@ -12,7 +12,9 @@ import {
   Tag,
 } from "lucide-react";
 
+import { Carrusel } from "@/components/landing/carrusel";
 import { estiloBoton } from "@/components/ui/boton";
+import { leerGaleria } from "@/lib/galeria";
 
 const BENEFICIOS = [
   {
@@ -59,6 +61,8 @@ const TESTIMONIOS = [
 const NAV = [
   { href: "#somos", etiqueta: "Somos" },
   { href: "#beneficios", etiqueta: "Beneficios" },
+  // La galería sólo existe si hay fotos cargadas; el enlace se filtra abajo.
+  { href: "#galeria", etiqueta: "Galería", requiereFotos: true },
   { href: "#testimonios", etiqueta: "Experiencias" },
   { href: "#contacto", etiqueta: "Contacto" },
 ];
@@ -81,19 +85,22 @@ function Iniciales({ nombre }: { nombre: string }) {
 }
 
 export default function PaginaInicio() {
+  const fotos = leerGaleria();
+  const navegacion = NAV.filter((n) => !n.requiereFotos || fotos.length > 0);
+
   return (
     <>
       {/* ------------------------------ Cabecera ----------------------------- */}
 
       <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/logo.png"
               alt=""
-              width={40}
-              height={40}
-              className="size-9 rounded-lg object-contain"
+              width={112}
+              height={112}
+              className="size-12 object-contain sm:size-14"
               priority
             />
             <span className="leading-tight">
@@ -107,7 +114,7 @@ export default function PaginaInicio() {
           </Link>
 
           <nav className="ml-auto hidden items-center gap-7 md:flex">
-            {NAV.map((n) => (
+            {navegacion.map((n) => (
               <a
                 key={n.href}
                 href={n.href}
@@ -152,7 +159,16 @@ export default function PaginaInicio() {
             />
           </svg>
 
-          <div className="relative mx-auto max-w-3xl px-4 py-24 text-center sm:px-6 sm:py-32">
+          <div className="relative mx-auto max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-28">
+            <Image
+              src="/logo.png"
+              alt="Escudo del Club de Montaña Collipulli"
+              width={320}
+              height={320}
+              className="mx-auto mb-6 size-32 object-contain drop-shadow-xl sm:size-40"
+              priority
+            />
+
             <span className="text-brand-100 inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-medium tracking-wide ring-1 ring-white/15 ring-inset">
               Comunidad de montaña
             </span>
@@ -254,6 +270,28 @@ export default function PaginaInicio() {
           </div>
         </section>
 
+        {/* ------------------------------ Galería ---------------------------- */}
+
+        {fotos.length > 0 && (
+          <section id="galeria" className="scroll-mt-16 bg-white">
+            <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+              <div className="mb-10 max-w-2xl">
+                <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
+                  Galería
+                </h2>
+                <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-900">
+                  La cordillera, por nuestros ojos
+                </p>
+                <p className="mt-3 text-stone-600">
+                  Fotografías de las salidas del club. Arrastra para recorrerlas.
+                </p>
+              </div>
+
+              <Carrusel fotos={fotos} />
+            </div>
+          </section>
+        )}
+
         {/* ---------------------------- Testimonios -------------------------- */}
 
         <section id="testimonios" className="scroll-mt-16 bg-white">
@@ -328,7 +366,7 @@ export default function PaginaInicio() {
             <div className="space-y-3">
               <p className="text-sm font-medium text-white">Síguenos</p>
               <a
-                href="https://instagram.com/clubmontanacollipulli"
+                href="https://www.instagram.com/club_montana_collipulli"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm hover:text-white"
