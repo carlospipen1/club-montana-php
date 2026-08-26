@@ -82,7 +82,7 @@ export default async function PaginaInicio() {
     <main className="flex-1">
       {/* -------------------------------- Hero ------------------------------- */}
 
-      <section className="bg-brand-950 relative overflow-hidden">
+      <section className="bg-brand-950 relative flex min-h-[32rem] items-center overflow-hidden sm:min-h-[38rem] lg:min-h-[min(44rem,calc(100svh-5rem))]">
         {portada ? (
           <>
             {/* Es la imagen más pesada de la página: se carga con prioridad para
@@ -135,7 +135,7 @@ export default async function PaginaInicio() {
           priority
         />
 
-        <div className="relative mx-auto max-w-3xl px-4 py-28 text-center sm:px-6 sm:py-36">
+        <div className="relative mx-auto w-full max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-24">
           <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide text-white ring-1 ring-white/25 backdrop-blur-sm ring-inset">
             Comunidad de montaña
           </span>

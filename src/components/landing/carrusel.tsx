@@ -12,8 +12,12 @@ export type FotoCarrusel = { src: string; alt: string };
 /**
  * Ancho de cada foto. Deja asomando la siguiente, que es lo que le dice a
  * cualquiera que la fila continúa hacia la derecha.
+ *
+ * El tope en rem es lo que evita que en un monitor ancho cada foto se estire
+ * hasta media pantalla: pasado ese ancho la foto ya no crece y lo que ocurre
+ * es que entran más fotos en la fila.
  */
-const ANCHO_FOTO = "w-[88%] sm:w-[74%] lg:w-[62%]";
+const ANCHO_FOTO = "w-[86%] max-w-[36rem] sm:w-[60%] lg:w-[46%]";
 
 /**
  * Carrusel de fotos, pensado para ir sobre fondo oscuro y de borde a borde.
@@ -125,10 +129,13 @@ export function Carrusel({ fotos }: { fotos: FotoCarrusel[] }) {
     <div>
       {/* Envuelve sólo la pista: si abarcara también los puntos de abajo, las
           flechas quedarían descentradas respecto de la imagen. */}
-      <div className="relative">
+      <div className="relative [--margen:calc(max(0px,(100%-72rem)/2)+1rem)] sm:[--margen:calc(max(0px,(100%-72rem)/2)+1.5rem)]">
+        {/* El margen lateral acompaña al contenedor de la página: la primera
+            foto arranca a la misma altura que el título, y las siguientes se
+            escapan por el borde derecho, que es lo que delata que hay más. */}
         <ul
           ref={pista}
-          className="flex snap-x snap-mandatory scroll-pl-4 [scrollbar-width:none] gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] sm:scroll-pl-6 sm:gap-5 sm:px-6 [&::-webkit-scrollbar]:hidden"
+          className="flex snap-x snap-mandatory scroll-pl-(--margen) [scrollbar-width:none] gap-4 overflow-x-auto scroll-smooth px-(--margen) pb-2 [-ms-overflow-style:none] sm:gap-5 [&::-webkit-scrollbar]:hidden"
           tabIndex={0}
           aria-label="Fotografías del club"
           onKeyDown={(e) => {
@@ -155,7 +162,7 @@ export function Carrusel({ fotos }: { fotos: FotoCarrusel[] }) {
                 src={foto.src}
                 alt={foto.alt}
                 fill
-                sizes="(max-width: 640px) 88vw, (max-width: 1024px) 74vw, 62vw"
+                sizes="(max-width: 640px) 86vw, (max-width: 1024px) 60vw, min(46vw, 36rem)"
                 className="object-cover"
                 // Sólo la primera se carga con prioridad; el resto, al acercarse.
                 priority={i === 0}
@@ -173,7 +180,7 @@ export function Carrusel({ fotos }: { fotos: FotoCarrusel[] }) {
           /* Flotan sobre los extremos de la pista. El contenedor no intercepta
              clics —eso impediría arrastrar la fila—; sólo los botones lo hacen.
              En móvil no aparecen: ahí se arrastra con el dedo. */
-          <div className="pointer-events-none absolute inset-y-0 right-0 left-0 hidden items-center justify-between px-3 pb-2 sm:flex">
+          <div className="pointer-events-none absolute inset-y-0 right-0 left-0 hidden items-center justify-between px-[calc(var(--margen)+0.75rem)] pb-2 sm:flex">
             <button
               type="button"
               onClick={anterior}
