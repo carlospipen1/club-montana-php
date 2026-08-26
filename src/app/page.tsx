@@ -327,7 +327,7 @@ export default function PaginaInicio() {
                   clases quedaban en el HTML y ganaba la que el CSS pusiera
                   después, no la de aquí. `cn` resuelve el conflicto. */}
               <a
-                href="mailto:contacto@clubmontanacollipulli.cl"
+                href="mailto:cmcollipulli@gmail.com"
                 className={cn(
                   estiloBoton("secondary", "md"),
                   "text-brand-900 hover:bg-brand-100 mt-5 bg-white",
@@ -388,11 +388,11 @@ export default function PaginaInicio() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <a
-                    href="mailto:contacto@clubmontanacollipulli.cl"
+                    href="mailto:cmcollipulli@gmail.com"
                     className="inline-flex items-center gap-2 hover:text-white"
                   >
                     <Mail className="size-4" aria-hidden />
-                    contacto@clubmontanacollipulli.cl
+                    cmcollipulli@gmail.com
                   </a>
                 </li>
                 <li>

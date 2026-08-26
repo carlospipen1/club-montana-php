@@ -38,7 +38,7 @@ export default async function PaginaLogin({ searchParams }: PageProps<"/login">)
         <p className="text-center text-xs text-stone-500">
           ¿No tienes cuenta? Las crea la directiva del club.{" "}
           <a
-            href="mailto:contacto@clubmontanacollipulli.cl"
+            href="mailto:cmcollipulli@gmail.com"
             className="text-brand-700 font-medium underline underline-offset-2"
           >
             Escríbenos
