@@ -13,8 +13,12 @@ import {
 import { Carrusel } from "@/components/landing/carrusel";
 import { CORREO_CLUB } from "@/components/landing/cabecera";
 import { estiloBoton } from "@/components/ui/boton";
-import { fotoDePortada, fotosDelCarrusel } from "@/lib/consultas-galeria";
-import { cn } from "@/lib/utils";
+import {
+  albumesPublicados,
+  fotoDePortada,
+  fotosDelCarrusel,
+} from "@/lib/consultas-galeria";
+import { cn, formatearFecha } from "@/lib/utils";
 
 const BENEFICIOS = [
   {
@@ -76,13 +80,25 @@ function Iniciales({ nombre }: { nombre: string }) {
 }
 
 export default async function PaginaInicio() {
-  const [portada, fotos] = await Promise.all([fotoDePortada(), fotosDelCarrusel()]);
+  const [portada, fotos, albumes] = await Promise.all([
+    fotoDePortada(),
+    fotosDelCarrusel(),
+    albumesPublicados(),
+  ]);
 
   return (
     <main className="flex-1">
       {/* -------------------------------- Hero ------------------------------- */}
 
-      <section className="bg-brand-950 relative overflow-hidden">
+      {/* La portada necesita altura propia. Si se la da sólo el texto, en un
+          monitor ancho queda una franja baja y `object-cover` recorta la foto
+          por arriba y por abajo hasta dejar una tira sin contexto.
+
+          El tope en pantallas grandes es el alto de la ventana menos la
+          cabecera, para que la foto llene lo visible sin empujar el resto fuera
+          de vista. Se usa `svh` y no `vh` porque en el teléfono la barra del
+          navegador aparece y desaparece, y `vh` provoca saltos. */}
+      <section className="bg-brand-950 relative flex min-h-[28rem] items-center overflow-hidden sm:min-h-[34rem] lg:min-h-[min(40rem,calc(100svh-5rem))]">
         {portada ? (
           <>
             {/* Es la imagen más pesada de la página: se carga con prioridad para
@@ -135,7 +151,9 @@ export default async function PaginaInicio() {
           priority
         />
 
-        <div className="relative mx-auto max-w-3xl px-4 py-28 text-center sm:px-6 sm:py-36">
+        {/* `w-full` es lo que permite que el centrado vertical de la sección
+            funcione: sin ancho propio, el bloque se encoge al texto. */}
+        <div className="relative mx-auto w-full max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-24">
           <span className="inline-flex items-center rounded-full bg-white/15 px-3 py-1 text-xs font-medium tracking-wide text-white ring-1 ring-white/25 backdrop-blur-sm ring-inset">
             Comunidad de montaña
           </span>
@@ -179,13 +197,16 @@ export default async function PaginaInicio() {
                 </p>
               </div>
 
-              <Link
-                href="/galeria"
-                className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/25 px-4 text-sm font-medium text-white transition-colors hover:bg-white/10 [&_svg]:size-4"
-              >
-                <Images aria-hidden />
-                Ver todos los álbumes
-              </Link>
+              {/* Baja a los álbumes, que ahora están en esta misma página. */}
+              {albumes.length > 0 && (
+                <a
+                  href="#galeria"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/25 px-4 text-sm font-medium text-white transition-colors hover:bg-white/10 [&_svg]:size-4"
+                >
+                  <Images aria-hidden />
+                  Ver todos los álbumes
+                </a>
+              )}
             </div>
 
             <Carrusel fotos={fotos.map((f) => ({ src: f.url, alt: f.pie ?? "" }))} />
@@ -278,9 +299,78 @@ export default async function PaginaInicio() {
         </div>
       </section>
 
+      {/* ------------------------------ Álbumes ------------------------------ */}
+
+      {/* Los álbumes viven aquí y no en una página aparte: quien llega a la
+          portada ya vio el carrusel arriba, y al terminar de leer qué implica
+          ser socio se encuentra con las salidas de verdad, sin tener que
+          navegar a otro lado. Cada álbum sí abre su propia página, que es donde
+          están todas sus fotos. */}
+      {albumes.length > 0 && (
+        <section id="galeria" className="scroll-mt-16 bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
+            <div className="max-w-2xl">
+              <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
+                Álbumes
+              </h2>
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-900">
+                Nuestras salidas, una por una
+              </p>
+              <p className="mt-3 text-pretty text-stone-600">
+                Fotografías tomadas por los propios socios. Entra a cualquiera para
+                verlas completas.
+              </p>
+            </div>
+
+            <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {albumes.map((a) => (
+                <li key={a.id}>
+                  <Link
+                    href={`/galeria/${a.id}`}
+                    className="group block overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-lg"
+                  >
+                    <div className="relative aspect-[3/2] overflow-hidden bg-stone-100">
+                      {a.portada ? (
+                        <Image
+                          src={a.portada}
+                          alt=""
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <span className="flex h-full items-center justify-center text-stone-300">
+                          <Images className="size-8" aria-hidden />
+                        </span>
+                      )}
+                      <span className="tabular absolute right-3 bottom-3 rounded-full bg-stone-950/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                        {a.totalFotos} foto{a.totalFotos === 1 ? "" : "s"}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 p-5">
+                      <h3 className="font-semibold text-stone-900">{a.titulo}</h3>
+                      <p className="text-sm text-stone-500">
+                        {formatearFecha(a.fecha)}
+                        {a.lugar ? ` · ${a.lugar}` : ""}
+                      </p>
+                      {a.descripcion && (
+                        <p className="line-clamp-2 pt-1 text-sm text-stone-600">
+                          {a.descripcion}
+                        </p>
+                      )}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
       {/* ---------------------------- Testimonios ---------------------------- */}
 
-      <section id="testimonios" className="scroll-mt-16 bg-white">
+      <section id="testimonios" className="scroll-mt-16 bg-stone-50">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
           <h2 className="text-brand-700 text-sm font-medium tracking-wide uppercase">
             Experiencias

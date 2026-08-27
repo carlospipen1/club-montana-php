@@ -38,7 +38,7 @@ export default async function PaginaAlbum({ params }: PageProps<"/galeria/[id]">
     <main className="flex-1 bg-white">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
         <Link
-          href="/galeria"
+          href="/#galeria"
           className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-900"
         >
           <ArrowLeft className="size-4" aria-hidden />

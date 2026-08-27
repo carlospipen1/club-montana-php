@@ -109,6 +109,8 @@ subida así queda registrada con una URL que el sitio publicado no tiene.
 
 - Un **álbum** por salida, con su título, fecha y lugar. Nace como borrador y no
   se ve en el sitio hasta que se publica.
+- La lista de álbumes vive en la portada, bajo "Lo que debes saber antes". No hay
+  una página aparte: cada álbum sí abre la suya, que es donde están sus fotos.
 - Las fotos se **reducen en el navegador** antes de subirse: de los 4 MB que trae
   el celular a unos 300 KB, sin pérdida visible en pantalla.
 - Se suben **de a una**, en fila, para no rozar el tope de tamaño de petición de
@@ -138,8 +140,8 @@ subida así queda registrada con una URL que el sitio publicado no tiene.
 src/
   app/
     (sitio)/              Sitio público: comparte cabecera y pie
-      page.tsx            Portada
-      galeria/            Álbumes y visor de fotos
+      page.tsx            Portada, con el carrusel y la lista de álbumes
+      galeria/[id]/       Un álbum con todas sus fotos y el visor
     login/                Ingreso a la intranet
     panel/                Intranet — todo lo de aquí exige sesión
       socios/  cuotas/  equipos/  prestamos/  salidas/

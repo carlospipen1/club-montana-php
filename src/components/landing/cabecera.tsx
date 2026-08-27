@@ -15,7 +15,7 @@ export const INSTAGRAM_CLUB = "https://www.instagram.com/club_montana_collipulli
 const NAV = [
   { href: "/#somos", etiqueta: "Somos" },
   { href: "/#beneficios", etiqueta: "Beneficios" },
-  { href: "/galeria", etiqueta: "Galería", requiereAlbumes: true },
+  { href: "/#galeria", etiqueta: "Galería", requiereAlbumes: true },
   { href: "/#testimonios", etiqueta: "Experiencias" },
   { href: "/#contacto", etiqueta: "Contacto" },
 ];

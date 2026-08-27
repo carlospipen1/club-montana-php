@@ -75,9 +75,7 @@ export async function accionActualizarAlbum(
     })
     .where(eq(albumes.id, id));
 
-  revalidatePath("/panel/galeria");
-  revalidatePath(`/panel/galeria/${id}`);
-  revalidatePath("/galeria");
+  revalidarTodo(id);
   return exito("Álbum guardado.");
 }
 
@@ -282,9 +280,12 @@ export async function accionAlternarCarrusel(
 
 /* -------------------------------------------------------------------------- */
 
+/**
+ * La portada muestra el carrusel y la lista de álbumes, así que cualquier cambio
+ * la afecta. Ya no existe una página `/galeria`: el listado vive en `/`.
+ */
 function revalidarTodo(albumId?: number) {
   revalidatePath("/");
-  revalidatePath("/galeria");
   revalidatePath("/panel/galeria");
   if (albumId) {
     revalidatePath(`/galeria/${albumId}`);
