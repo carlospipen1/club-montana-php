@@ -6,6 +6,29 @@ Las fotos están en `fotos-testimonios/`, nombradas con el nombre de cada person
 
 ---
 
+## Diseño acordado para la portada (2026-08-27)
+
+Cada testimonio es una fila ancha: foto rectangular a un costado y el texto al
+lado, alternando el lado fila por fila. La foto va a 430 px de ancho y llega
+hasta el borde de la tarjeta, sin marco interior.
+
+El punto de todo esto es que se vea a la persona **en la montaña**, no su cara:
+con la foto angosta el recorte se cierra sobre el rostro y se pierde el paisaje.
+Por eso, al pedir las fotos que faltan conviene privilegiar las que muestren el
+entorno y no el primer plano.
+
+Lo que sirve tener de cada persona:
+
+- Una foto **vertical**, con la persona dentro del paisaje.
+- El cargo o rol en el club, si tiene alguno.
+- El año en que entró al club (el «Socio desde 2019» del diseño anterior era
+  inventado; si hay años reales, se usan).
+
+Pendientes al día de hoy: la foto de Juan Ulloa, y los cargos y años de ingreso
+de Karen Reyes, Ronald Molina, Jonathan Paredes y Rodrigo Paredes.
+
+---
+
 ## Juan Ulloa — Presidente del club
 
 > El club de montaña Collipulli me ha permitido desarrollar el deporte de montaña más allá de mis expectativas, en donde a través de su proceso formativo, he adquirido herramientas y habilidades para lograr autonomía, todo acorde al compañerismo y el respeto por la naturaleza.
@@ -78,3 +101,17 @@ Las fotos están en `fotos-testimonios/`, nombradas con el nombre de cada person
 - Foto: pendiente
 - Autorización para publicar: pendiente de confirmar
 -->
+
+## Carlos Aburto — Encargado de la Comisión Técnica
+
+> El 2023 nos unimos al club con mi esposa, y hoy no sabría separar una cosa de la otra: la montaña se volvió algo que hacemos juntos. Desde el año pasado estoy a cargo de la Comisión Técnica, y esa responsabilidad me hizo crecer más rápido que cualquier salida: planificar, decidir cuándo seguir y cuándo volver, hacerme cargo de que el grupo llegue completo.
+>
+> En ese mismo tiempo empecé a hacer esquí de montaña, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.
+>
+> Hemos cumplido los objetivos que nos propusimos y lo hemos hecho sin accidentes. Para mí ese es el logro real.
+
+- Recopilado: 2026-08-27
+- Cargo o rol: Encargado de la Comisión Técnica (desde 2025)
+- Foto: `fotos-testimonios/carlos-aburto-recortada.jpeg` (795x1060, recomendada para tarjeta)
+- Original recibido: `fotos-testimonios/carlos-aburto.jpeg` (900x1600, mucho cielo y nieve vacía arriba)
+- Autorización para publicar: sí, es el propio autor
