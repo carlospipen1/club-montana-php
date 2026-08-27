@@ -25,8 +25,8 @@ Lo que sirve tener de cada persona:
   inventado; si hay años reales, se usan).
 
 Pendientes al día de hoy: la foto de Juan Ulloa, y los cargos y años de ingreso
-de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo Paredes y Patricio
-García.
+de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo Paredes, Patricio
+García y Arantxa Mol.
 
 ---
 
@@ -104,6 +104,26 @@ García.
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
 - Nota: es un primer plano. Se ve el volcán al fondo, pero en la fila va a leerse
   más como retrato que como foto de montaña.
+
+---
+
+## Arantxa Mol
+
+> Llevo tres años siendo parte de este club y he aprendido mucho, no solo sobre seguridad, técnicas y maniobras en la montaña sino también sobre confianza, perseverancia y compañerismo.
+>
+> Gracias al club he tenido la oportunidad de conocer lugares hermosos, conquistar cumbres y vivir desafiantes y aventureras experiencias.
+>
+> Una de las cosas que más valoro es la linda familia montañera que hemos construido como club, un grupo de personas que comparte la pasión por la montaña, que se apoya y que disfruta cada aventura, tanto en los grandes desafíos como en los pequeños momentos del camino.
+>
+> Estos tres años han sido de mucho aprendizaje, experiencias inolvidables y, sobre todo, de amor por la montaña y por esta comunidad que tengo la suerte de llamar mi club.
+
+- Recopilado: 2026-08-27
+- Cargo o rol: por confirmar
+- Socia desde: por confirmar. Ella dice «llevo tres años», o sea alrededor de 2023.
+- Foto: `fotos-testimonios/arantxa-mol.jpeg` (960x1280)
+- Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
+- Nota: la foto que mejor calza con el diseño acordado, se la ve dentro del paisaje.
+  El texto es el más largo de todos; para la portada conviene recortarlo.
 
 ---
 
