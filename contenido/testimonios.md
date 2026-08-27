@@ -24,9 +24,12 @@ Lo que sirve tener de cada persona:
 - El año en que entró al club (el «Socio desde 2019» del diseño anterior era
   inventado; si hay años reales, se usan).
 
-Al 2026-08-27 los siete testimonios tienen foto. Queda por confirmar el cargo o
-rol y el año de ingreso de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo
-Paredes, Patricio García y Arantxa Mol.
+Al 2026-08-27 hay ocho testimonios y todos tienen foto. Queda por confirmar el
+cargo o rol y el año de ingreso de Karen Reyes, Ronald Molina, Jonathan Paredes,
+Rodrigo Paredes, Patricio García y Arantxa Mol.
+
+Ocho filas apiladas son una sección muy larga para la portada. Hay que decidir
+cuántas se muestran ahí y si el resto va en una página propia.
 
 ---
 
@@ -129,6 +132,23 @@ Paredes, Patricio García y Arantxa Mol.
 
 ---
 
+## Carlos Aburto — Encargado de la Comisión Técnica
+
+> El 2023 nos unimos al club con mi esposa, y hoy no sabría separar una cosa de la otra: la montaña se volvió algo que hacemos juntos. Desde el año pasado estoy a cargo de la Comisión Técnica, y esa responsabilidad me hizo crecer más rápido que cualquier salida: planificar, decidir cuándo seguir y cuándo volver, hacerme cargo de que el grupo llegue completo.
+>
+> En ese mismo tiempo empecé a hacer esquí de montaña, dentro y fuera de pista, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.
+>
+> Hemos cumplido los objetivos que nos propusimos y lo hemos hecho sin accidentes. Para mí ese es el logro real.
+
+- Recopilado: 2026-08-27
+- Cargo o rol: Encargado de la Comisión Técnica (desde 2025)
+- Socio desde: 2023
+- Foto: `fotos-testimonios/carlos-aburto-recortada.jpeg` (795x1060, recomendada para tarjeta)
+- Original recibido: `fotos-testimonios/carlos-aburto.jpeg` (900x1600, mucho cielo y nieve vacía arriba)
+- Autorización para publicar: sí, es el propio autor
+
+---
+
 <!-- Para agregar un testimonio nuevo, copia el bloque de arriba:
 ## Nombre Apellido — Cargo o rol
 
@@ -138,17 +158,3 @@ Paredes, Patricio García y Arantxa Mol.
 - Foto: pendiente
 - Autorización para publicar: pendiente de confirmar
 -->
-
-## Carlos Aburto — Encargado de la Comisión Técnica
-
-> El 2023 nos unimos al club con mi esposa, y hoy no sabría separar una cosa de la otra: la montaña se volvió algo que hacemos juntos. Desde el año pasado estoy a cargo de la Comisión Técnica, y esa responsabilidad me hizo crecer más rápido que cualquier salida: planificar, decidir cuándo seguir y cuándo volver, hacerme cargo de que el grupo llegue completo.
->
-> En ese mismo tiempo empecé a hacer esquí de montaña, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.
->
-> Hemos cumplido los objetivos que nos propusimos y lo hemos hecho sin accidentes. Para mí ese es el logro real.
-
-- Recopilado: 2026-08-27
-- Cargo o rol: Encargado de la Comisión Técnica (desde 2025)
-- Foto: `fotos-testimonios/carlos-aburto-recortada.jpeg` (795x1060, recomendada para tarjeta)
-- Original recibido: `fotos-testimonios/carlos-aburto.jpeg` (900x1600, mucho cielo y nieve vacía arriba)
-- Autorización para publicar: sí, es el propio autor
