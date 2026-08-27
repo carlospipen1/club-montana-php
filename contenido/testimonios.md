@@ -14,22 +14,20 @@ hasta el borde de la tarjeta, sin marco interior.
 
 El punto de todo esto es que se vea a la persona **en la montaña**, no su cara:
 con la foto angosta el recorte se cierra sobre el rostro y se pierde el paisaje.
-Por eso, al pedir las fotos que faltan conviene privilegiar las que muestren el
-entorno y no el primer plano.
+Por eso, si alguna foto se reemplaza más adelante, conviene privilegiar las que
+muestren el entorno y no el primer plano.
 
-Lo que sirve tener de cada persona:
+Bajo cada nombre va el cargo, y quien no tiene uno aparece simplemente como
+socio o socia del club. **No se muestran años de ingreso.** El «Socio desde
+2019» del diseño anterior era inventado, y se prefirió eliminar ese dato antes
+que arrastrar el formato con años reales.
 
-- Una foto **vertical**, con la persona dentro del paisaje.
-- El cargo o rol en el club, si tiene alguno.
-- El año en que entró al club (el «Socio desde 2019» del diseño anterior era
-  inventado; si hay años reales, se usan).
+Al 2026-08-27 hay ocho testimonios, todos con foto y con su cargo definido: el
+material está completo.
 
-Al 2026-08-27 hay ocho testimonios y todos tienen foto. Queda por confirmar el
-cargo o rol y el año de ingreso de Karen Reyes, Ronald Molina, Jonathan Paredes,
-Rodrigo Paredes, Patricio García y Arantxa Mol.
-
-Ocho filas apiladas son una sección muy larga para la portada. Hay que decidir
-cuántas se muestran ahí y si el resto va en una página propia.
+Lo único abierto es el largo. Ocho filas apiladas hacen una sección muy alta
+para la portada; hay que decidir cuántas se muestran ahí y si el resto va en una
+página propia.
 
 ---
 
@@ -50,7 +48,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > Ha sido una experiencia muy positiva, llena de aprendizajes y nuevos desafíos, que te prepara para vivir la montaña de forma segura, responsable y consciente, rodeado de grandes personas.
 
 - Recopilado: 2026-08-26
-- Cargo o rol: por confirmar
+- Cargo o rol: Socia del club
 - Foto: `fotos-testimonios/karen-reyes.jpeg` (853x1280)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
 
@@ -65,7 +63,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > Cada salida deja recuerdos, nuevas historias y la motivación para volver. Sin duda, las experiencias de montaña se transforman en momentos que uno guarda para siempre.
 
 - Recopilado: 2026-08-26
-- Cargo o rol: por confirmar
+- Cargo o rol: Socio del club
 - Foto: `fotos-testimonios/ronald-molina-recortada.jpeg` (690x922, recortada del marco de Meta AI)
 - Original recibido: `fotos-testimonios/ronald-molina.jpeg` (899x1599, con marco y marca de agua)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
@@ -78,7 +76,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > No podemos pelear contra la montaña, solo esperamos, se hará lo que ella diga. Si la montaña dice "no" hay que esperar... Si la montaña dice "sube" entonces subimos.
 
 - Recopilado: 2026-08-26
-- Cargo o rol: por confirmar
+- Cargo o rol: Socio del club
 - Foto: `fotos-testimonios/jonathan-paredes.jpeg` (1200x1600, sin retoques)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
 - Nota: el más breve y el más citable; buen candidato para destacar en la portada.
@@ -90,7 +88,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > Aventura, inspiración y naturaleza... La combinación perfecta.
 
 - Recopilado: 2026-08-27
-- Cargo o rol: por confirmar
+- Cargo o rol: Socio del club
 - Foto: `fotos-testimonios/rodrigo-paredes-recortada.jpeg` (720x874, recomendada para tarjeta)
 - Alternativa: `fotos-testimonios/rodrigo-paredes.jpeg` (720x1164, escena completa)
 - Original recibido: `fotos-testimonios/rodrigo-paredes-original.jpeg` (720x1600, con franjas negras)
@@ -103,7 +101,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > Gracias al club, he logrado aprender cosas nuevas que me han ayudado a sentirme más seguro en la montaña. Además, me ha ayudado a superar mis propios límites, tanto físicos como mentales, y siempre se siente un espíritu de compañerismo que se fortalece con cada salida a la montaña.
 
 - Recopilado: 2026-08-27
-- Cargo o rol: por confirmar
+- Cargo o rol: Socio del club
 - Foto: `fotos-testimonios/patricio-garcia.jpeg` (1400x1867, sin el espejo del selfie)
 - Original recibido: `fotos-testimonios/patricio-garcia-original.jpeg` (1400x1867, espejada)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
@@ -123,8 +121,7 @@ cuántas se muestran ahí y si el resto va en una página propia.
 > Estos tres años han sido de mucho aprendizaje, experiencias inolvidables y, sobre todo, de amor por la montaña y por esta comunidad que tengo la suerte de llamar mi club.
 
 - Recopilado: 2026-08-27
-- Cargo o rol: por confirmar
-- Socia desde: por confirmar. Ella dice «llevo tres años», o sea alrededor de 2023.
+- Cargo o rol: Socia del club
 - Foto: `fotos-testimonios/arantxa-mol.jpeg` (960x1280)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
 - Nota: la foto que mejor calza con el diseño acordado, se la ve dentro del paisaje.
@@ -136,13 +133,12 @@ cuántas se muestran ahí y si el resto va en una página propia.
 
 > El 2023 nos unimos al club con mi esposa, y hoy no sabría separar una cosa de la otra: la montaña se volvió algo que hacemos juntos. Desde el año pasado estoy a cargo de la Comisión Técnica, y esa responsabilidad me hizo crecer más rápido que cualquier salida: planificar, decidir cuándo seguir y cuándo volver, hacerme cargo de que el grupo llegue completo.
 >
-> En ese mismo tiempo empecé a hacer esquí de montaña, dentro y fuera de pista, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.
+> En ese mismo tiempo empecé a hacer esquí de montaña, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.
 >
 > Hemos cumplido los objetivos que nos propusimos y lo hemos hecho sin accidentes. Para mí ese es el logro real.
 
 - Recopilado: 2026-08-27
-- Cargo o rol: Encargado de la Comisión Técnica (desde 2025)
-- Socio desde: 2023
+- Cargo o rol: Encargado de la Comisión Técnica
 - Foto: `fotos-testimonios/carlos-aburto-recortada.jpeg` (795x1060, recomendada para tarjeta)
 - Original recibido: `fotos-testimonios/carlos-aburto.jpeg` (900x1600, mucho cielo y nieve vacía arriba)
 - Autorización para publicar: sí, es el propio autor
