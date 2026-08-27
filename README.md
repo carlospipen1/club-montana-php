@@ -215,8 +215,6 @@ Cada punto corresponde a un problema real del sistema anterior:
 
 ## Pendientes conocidos
 
-- Los tres testimonios de la portada conservan el texto del sitio anterior. Es lo
-  último que queda de relleno.
 - `public/logo.png` pesa 1,9 MB. Lo sirve `next/image` optimizado, pero conviene
   reemplazarlo por una versión de ~50 KB.
 - No hay envío de correos: las notificaciones viven dentro de la intranet. Si se
