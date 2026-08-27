@@ -41,43 +41,91 @@ const BENEFICIOS = [
   },
 ];
 
+/**
+ * Testimonios reales, entregados por sus autores. Van ordenados por cuánto
+ * muestra la foto a la persona dentro del paisaje: es lo que la sección quiere
+ * contar, así que las mejores abren. El texto se conserva tal como lo
+ * escribieron; los párrafos van separados en el arreglo.
+ */
 const TESTIMONIOS = [
   {
-    texto:
-      "He logrado cumbres que jamás pensé que podría subir. Encantado de participar con un gran equipo de compañeros.",
-    nombre: "Rodrigo Sanhueza",
-    detalle: "Socio desde 2019",
+    parrafos: [
+      "Llevo tres años siendo parte de este club y he aprendido mucho, no solo sobre seguridad, técnicas y maniobras en la montaña sino también sobre confianza, perseverancia y compañerismo.",
+      "Gracias al club he tenido la oportunidad de conocer lugares hermosos, conquistar cumbres y vivir desafiantes y aventureras experiencias.",
+      "Una de las cosas que más valoro es la linda familia montañera que hemos construido como club, un grupo de personas que comparte la pasión por la montaña, que se apoya y que disfruta cada aventura, tanto en los grandes desafíos como en los pequeños momentos del camino.",
+      "Estos tres años han sido de mucho aprendizaje, experiencias inolvidables y, sobre todo, de amor por la montaña y por esta comunidad que tengo la suerte de llamar mi club.",
+    ],
+    nombre: "Arantxa Mol",
+    detalle: "Socia del club",
+    foto: "/testimonios/arantxa-mol.jpg",
+    alto: "Arantxa Mol de pie en un filo nevado, mirando el valle y la cordillera",
   },
   {
-    texto:
-      "En los cursos y talleres me han enseñado nuevas técnicas y el uso adecuado de los implementos deportivos.",
-    nombre: "Camila Martínez",
-    detalle: "Socia desde 2021",
+    parrafos: [
+      "El club de montaña Collipulli me ha permitido desarrollar el deporte de montaña más allá de mis expectativas, en donde a través de su proceso formativo, he adquirido herramientas y habilidades para lograr autonomía, todo acorde al compañerismo y el respeto por la naturaleza.",
+    ],
+    nombre: "Juan Ulloa",
+    detalle: "Presidente del club",
+    foto: "/testimonios/juan-ulloa.jpg",
+    alto: "Juan Ulloa sosteniendo la bandera del club en una cumbre nevada",
   },
   {
-    texto:
-      "El compañerismo nos ayuda a trabajar con seguridad, haciendo del montañismo una opción de vida.",
-    nombre: "Fernando Antilef",
-    detalle: "Socio fundador",
+    parrafos: ["Aventura, inspiración y naturaleza... La combinación perfecta."],
+    nombre: "Rodrigo Paredes",
+    detalle: "Socio del club",
+    foto: "/testimonios/rodrigo-paredes.jpg",
+    alto: "Rodrigo Paredes ascendiendo con esquís por una ladera nevada",
+  },
+  {
+    parrafos: [
+      "El 2023 nos unimos al club con mi esposa, y hoy no sabría separar una cosa de la otra: la montaña se volvió algo que hacemos juntos. Desde el año pasado estoy a cargo de la Comisión Técnica, y esa responsabilidad me hizo crecer más rápido que cualquier salida: planificar, decidir cuándo seguir y cuándo volver, hacerme cargo de que el grupo llegue completo.",
+      "En ese mismo tiempo empecé a hacer esquí de montaña, aprendiendo de mis referentes y amigos dentro del club. Eso es lo que más valoro: acá nadie guarda lo que sabe.",
+      "Hemos cumplido los objetivos que nos propusimos y lo hemos hecho sin accidentes. Para mí ese es el logro real.",
+    ],
+    nombre: "Carlos Aburto",
+    detalle: "Encargado de la Comisión Técnica",
+    foto: "/testimonios/carlos-aburto.jpg",
+    alto: "Carlos Aburto con esquís de montaña en una ladera nevada",
+  },
+  {
+    parrafos: [
+      "Ha sido una experiencia muy positiva, llena de aprendizajes y nuevos desafíos, que te prepara para vivir la montaña de forma segura, responsable y consciente, rodeado de grandes personas.",
+    ],
+    nombre: "Karen Reyes",
+    detalle: "Socia del club",
+    foto: "/testimonios/karen-reyes.jpg",
+    alto: "Karen Reyes sentada en la nieve con la cordillera detrás",
+  },
+  {
+    parrafos: [
+      "La montaña ha sido para mí mucho más que un lugar para disfrutar de la naturaleza. Cada experiencia vivida en ella ha significado aprendizaje, esfuerzo y momentos inolvidables.",
+      "Compartir una ruta, contemplar los paisajes, superar el cansancio y llegar a la cima genera una sensación de satisfacción difícil de explicar. La montaña también enseña a valorar la tranquilidad, el compañerismo y la importancia de disfrutar cada paso del camino.",
+      "Cada salida deja recuerdos, nuevas historias y la motivación para volver. Sin duda, las experiencias de montaña se transforman en momentos que uno guarda para siempre.",
+    ],
+    nombre: "Ronald Molina",
+    detalle: "Socio del club",
+    foto: "/testimonios/ronald-molina.jpg",
+    alto: "Ronald Molina de pie en la nieve con sus bastones",
+  },
+  {
+    parrafos: [
+      "Gracias al club, he logrado aprender cosas nuevas que me han ayudado a sentirme más seguro en la montaña. Además, me ha ayudado a superar mis propios límites, tanto físicos como mentales, y siempre se siente un espíritu de compañerismo que se fortalece con cada salida a la montaña.",
+    ],
+    nombre: "Patricio García",
+    detalle: "Socio del club",
+    foto: "/testimonios/patricio-garcia.jpg",
+    alto: "Patricio García en una cumbre nevada, con un volcán al fondo",
+  },
+  {
+    parrafos: [
+      "No podemos pelear contra la montaña, solo esperamos, se hará lo que ella diga. Si la montaña dice «no» hay que esperar... Si la montaña dice «sube» entonces subimos.",
+    ],
+    nombre: "Jonathan Paredes",
+    detalle: "Socio del club",
+    foto: "/testimonios/jonathan-paredes.jpg",
+    alto: "Jonathan Paredes en una cumbre invernal junto a penitentes de nieve",
   },
 ];
-
-function Iniciales({ nombre }: { nombre: string }) {
-  const iniciales = nombre
-    .split(" ")
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join("");
-
-  return (
-    <span
-      aria-hidden
-      className="bg-brand-100 text-brand-800 flex size-11 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-    >
-      {iniciales}
-    </span>
-  );
-}
 
 export default async function PaginaInicio() {
   const [portada, fotos, albumes] = await Promise.all([
@@ -379,24 +427,53 @@ export default async function PaginaInicio() {
             La experiencia en el club
           </p>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {TESTIMONIOS.map((t) => (
+          <div className="mt-10 flex flex-col gap-6">
+            {TESTIMONIOS.map((t, i) => (
               <figure
                 key={t.nombre}
-                className="flex flex-col rounded-xl border border-stone-200 bg-stone-50/70 p-6"
+                className={cn(
+                  "grid overflow-hidden rounded-xl border border-stone-200 bg-white",
+                  // La foto cambia de lado en cada fila para que la sección no se
+                  // lea como una lista. La columna fija tiene que cambiar de lado
+                  // junto con ella: con `order` a secas, el texto se quedaba con
+                  // los 430 px y la foto se estiraba.
+                  i % 2 === 0
+                    ? "md:grid-cols-[430px_1fr]"
+                    : "md:grid-cols-[1fr_430px]",
+                )}
               >
-                <blockquote className="flex-1 text-stone-700">
-                  <p className="text-pretty">«{t.texto}»</p>
-                </blockquote>
-                <figcaption className="mt-5 flex items-center gap-3 border-t border-stone-200 pt-4">
-                  <Iniciales nombre={t.nombre} />
-                  <span>
+                <div
+                  className={cn(
+                    "relative h-72 md:h-auto",
+                    // En móvil la foto siempre va arriba.
+                    i % 2 === 1 && "md:order-2",
+                  )}
+                >
+                  <Image
+                    src={t.foto}
+                    alt={t.alto}
+                    fill
+                    sizes="(min-width: 768px) 430px, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+                <div className="flex flex-col justify-center p-6 sm:p-10 md:min-h-[420px]">
+                  <blockquote className="space-y-3 text-lg leading-relaxed text-stone-700">
+                    {t.parrafos.map((parrafo, p) => (
+                      <p key={p} className="text-pretty">
+                        {p === 0 && "«"}
+                        {parrafo}
+                        {p === t.parrafos.length - 1 && "»"}
+                      </p>
+                    ))}
+                  </blockquote>
+                  <figcaption className="mt-7 border-t border-stone-200 pt-5">
                     <span className="block text-sm font-semibold text-stone-900">
                       {t.nombre}
                     </span>
                     <span className="block text-xs text-stone-500">{t.detalle}</span>
-                  </span>
-                </figcaption>
+                  </figcaption>
+                </div>
               </figure>
             ))}
           </div>
