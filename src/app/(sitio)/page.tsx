@@ -444,8 +444,11 @@ export default async function PaginaInicio() {
               >
                 <div
                   className={cn(
-                    "relative h-72 md:h-auto",
-                    // En móvil la foto siempre va arriba.
+                    // En móvil la foto va arriba, y la caja toma la proporción
+                    // vertical de las fotos (3:4) en vez de una altura fija: con
+                    // una franja apaisada el recorte centrado dejaba a la persona
+                    // sin cabeza. En escritorio la altura la manda la fila.
+                    "relative aspect-3/4 md:aspect-auto md:h-auto",
                     i % 2 === 1 && "md:order-2",
                   )}
                 >
