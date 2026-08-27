@@ -25,7 +25,8 @@ Lo que sirve tener de cada persona:
   inventado; si hay años reales, se usan).
 
 Pendientes al día de hoy: la foto de Juan Ulloa, y los cargos y años de ingreso
-de Karen Reyes, Ronald Molina, Jonathan Paredes y Rodrigo Paredes.
+de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo Paredes y Patricio
+García.
 
 ---
 
@@ -89,6 +90,20 @@ de Karen Reyes, Ronald Molina, Jonathan Paredes y Rodrigo Paredes.
 - Alternativa: `fotos-testimonios/rodrigo-paredes.jpeg` (720x1164, escena completa)
 - Original recibido: `fotos-testimonios/rodrigo-paredes-original.jpeg` (720x1600, con franjas negras)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
+
+---
+
+## Patricio García
+
+> Gracias al club, he logrado aprender cosas nuevas que me han ayudado a sentirme más seguro en la montaña. Además, me ha ayudado a superar mis propios límites, tanto físicos como mentales, y siempre se siente un espíritu de compañerismo que se fortalece con cada salida a la montaña.
+
+- Recopilado: 2026-08-27
+- Cargo o rol: por confirmar
+- Foto: `fotos-testimonios/patricio-garcia.jpeg` (1400x1867, sin el espejo del selfie)
+- Original recibido: `fotos-testimonios/patricio-garcia-original.jpeg` (1400x1867, espejada)
+- Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
+- Nota: es un primer plano. Se ve el volcán al fondo, pero en la fila va a leerse
+  más como retrato que como foto de montaña.
 
 ---
 
