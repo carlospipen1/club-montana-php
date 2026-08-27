@@ -22,12 +22,11 @@ socio o socia del club. **No se muestran años de ingreso.** El «Socio desde
 2019» del diseño anterior era inventado, y se prefirió eliminar ese dato antes
 que arrastrar el formato con años reales.
 
-Al 2026-08-27 hay ocho testimonios, todos con foto y con su cargo definido: el
-material está completo.
+Al 2026-08-27 hay nueve testimonios, todos con foto y con su cargo definido.
 
-Lo único abierto es el largo. Ocho filas apiladas hacen una sección muy alta
-para la portada; hay que decidir cuántas se muestran ahí y si el resto va en una
-página propia.
+El largo quedó asumido: se muestran todas en la portada, aunque la sección sea
+alta. Si algún día son demasiadas, la salida es dejar unas pocas ahí y mandar el
+resto a una página propia.
 
 ---
 
@@ -142,6 +141,25 @@ página propia.
 - Foto: `fotos-testimonios/carlos-aburto-recortada.jpeg` (795x1060, recomendada para tarjeta)
 - Original recibido: `fotos-testimonios/carlos-aburto.jpeg` (900x1600, mucho cielo y nieve vacía arriba)
 - Autorización para publicar: sí, es el propio autor
+
+---
+
+## Valentina Cortés
+
+> Ser parte del Club de Montaña Collipulli ha sido una experiencia muy especial. Qué bonito es encontrar un grupo de personas con quienes compartir la montaña y disfrutarla con la misma pasión.
+>
+> Más allá de aprender, lo lindo ha sido vivirla juntos, emocionarnos con una cumbre, contemplar un paisaje, enfrentar desafíos y disfrutar también de las risas y anécdotas que quedan en el camino.
+>
+> Agradezco mucho ser parte de este club y haber encontrado aquí un grupo con el que cada salida se transforma en una experiencia que vale la pena guardar.
+
+- Recopilado: 2026-08-27
+- Cargo o rol: Socia del club
+- Foto: `fotos-testimonios/valentina-cortes-recortada.jpeg` (900x1200)
+- Original recibido: `fotos-testimonios/valentina-cortes.jpeg` (1600x1200, apaisada)
+- Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
+- Nota: la única foto apaisada que llegó. Se recortó a 3:4 centrando en ella, que
+  es lo que necesita la fila; el panorama completo se pierde en el recorte.
+- Va al final de la sección, por pedido de Carlos.
 
 ---
 

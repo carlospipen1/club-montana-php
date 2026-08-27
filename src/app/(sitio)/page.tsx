@@ -125,6 +125,17 @@ const TESTIMONIOS = [
     foto: "/testimonios/jonathan-paredes.jpg",
     alto: "Jonathan Paredes en una cumbre invernal junto a penitentes de nieve",
   },
+  {
+    parrafos: [
+      "Ser parte del Club de Montaña Collipulli ha sido una experiencia muy especial. Qué bonito es encontrar un grupo de personas con quienes compartir la montaña y disfrutarla con la misma pasión.",
+      "Más allá de aprender, lo lindo ha sido vivirla juntos, emocionarnos con una cumbre, contemplar un paisaje, enfrentar desafíos y disfrutar también de las risas y anécdotas que quedan en el camino.",
+      "Agradezco mucho ser parte de este club y haber encontrado aquí un grupo con el que cada salida se transforma en una experiencia que vale la pena guardar.",
+    ],
+    nombre: "Valentina Cortés",
+    detalle: "Socia del club",
+    foto: "/testimonios/valentina-cortes.jpg",
+    alto: "Valentina Cortés al amanecer en altura, con la cordillera al fondo",
+  },
 ];
 
 export default async function PaginaInicio() {
