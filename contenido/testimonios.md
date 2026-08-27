@@ -24,9 +24,9 @@ Lo que sirve tener de cada persona:
 - El año en que entró al club (el «Socio desde 2019» del diseño anterior era
   inventado; si hay años reales, se usan).
 
-Pendientes al día de hoy: la foto de Juan Ulloa, y los cargos y años de ingreso
-de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo Paredes, Patricio
-García y Arantxa Mol.
+Al 2026-08-27 los siete testimonios tienen foto. Queda por confirmar el cargo o
+rol y el año de ingreso de Karen Reyes, Ronald Molina, Jonathan Paredes, Rodrigo
+Paredes, Patricio García y Arantxa Mol.
 
 ---
 
@@ -35,8 +35,10 @@ García y Arantxa Mol.
 > El club de montaña Collipulli me ha permitido desarrollar el deporte de montaña más allá de mis expectativas, en donde a través de su proceso formativo, he adquirido herramientas y habilidades para lograr autonomía, todo acorde al compañerismo y el respeto por la naturaleza.
 
 - Recopilado: 2026-08-26
-- Foto: pendiente
+- Foto: `fotos-testimonios/juan-ulloa.jpeg` (720x1280)
 - Autorización para publicar: sí, confirmada por Carlos Aburto el 2026-08-27
+- Nota: sostiene la bandera del club en la cumbre. Es la única con el logo del
+  club a la vista; sirve también fuera de los testimonios.
 
 ---
 
