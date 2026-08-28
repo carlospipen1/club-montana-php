@@ -59,14 +59,30 @@ function PasswordTemporal({ email, password }: { email: string; password: string
 /*  Campos compartidos                                                         */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Orden en que se ofrecen los roles al crear o editar un socio: de menos a más
+ * atribuciones.
+ *
+ * `secretario` faltó acá durante un tiempo —se agregó junto con las actas y esta
+ * lista quedó atrás—, así que no se podía nombrar secretaria a nadie desde el
+ * panel. Para que no vuelva a pasar, la comprobación de abajo rompe la
+ * compilación si algún rol del esquema no está en esta lista.
+ */
 const ROLES = [
   "miembro",
   "encargado_equipo",
   "comision_tecnica",
+  "secretario",
   "tesorero",
   "presidente",
   "admin",
-] as const;
+] as const satisfies readonly Rol[];
+
+type RolQueFalta = Exclude<Rol, (typeof ROLES)[number]>;
+// Si se agrega un rol al esquema y no se suma a ROLES, `RolQueFalta` deja de ser
+// `never` y esta línea no compila.
+const _todosLosRolesEstan: [RolQueFalta] extends [never] ? true : never = true;
+void _todosLosRolesEstan;
 
 function CamposSocio({
   socio,
