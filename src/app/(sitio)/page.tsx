@@ -102,10 +102,10 @@ const TESTIMONIOS = [
       "Compartir una ruta, contemplar los paisajes, superar el cansancio y llegar a la cima genera una sensación de satisfacción difícil de explicar. La montaña también enseña a valorar la tranquilidad, el compañerismo y la importancia de disfrutar cada paso del camino.",
       "Cada salida deja recuerdos, nuevas historias y la motivación para volver. Sin duda, las experiencias de montaña se transforman en momentos que uno guarda para siempre.",
     ],
-    nombre: "Ronald Molina",
+    nombre: "Ronal Molina",
     detalle: "Socio del club",
     foto: "/testimonios/ronald-molina.jpg",
-    alto: "Ronald Molina de pie en la nieve con sus bastones",
+    alto: "Ronal Molina de pie en la nieve con sus bastones",
   },
   {
     parrafos: [
@@ -448,9 +448,7 @@ export default async function PaginaInicio() {
                   // lea como una lista. La columna fija tiene que cambiar de lado
                   // junto con ella: con `order` a secas, el texto se quedaba con
                   // los 430 px y la foto se estiraba.
-                  i % 2 === 0
-                    ? "md:grid-cols-[430px_1fr]"
-                    : "md:grid-cols-[1fr_430px]",
+                  i % 2 === 0 ? "md:grid-cols-[430px_1fr]" : "md:grid-cols-[1fr_430px]",
                 )}
               >
                 <div

@@ -50,3 +50,7 @@ legacy/
 
 # Fotos a la espera de subirse por el mantenedor
 /fotos-para-subir
+
+# Datos personales de socios (RUT, teléfono, correo, fecha de nacimiento).
+# El repositorio es público: esto no se versiona nunca.
+/datos-socios

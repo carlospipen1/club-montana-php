@@ -53,7 +53,7 @@ resto a una página propia.
 
 ---
 
-## Ronald Molina
+## Ronal Molina
 
 > La montaña ha sido para mí mucho más que un lugar para disfrutar de la naturaleza. Cada experiencia vivida en ella ha significado aprendizaje, esfuerzo y momentos inolvidables.
 >
