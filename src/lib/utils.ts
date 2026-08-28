@@ -125,3 +125,24 @@ export function diasDeAtraso(fechaHasta: string): number {
   const ms = Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${fechaHasta}T00:00:00Z`);
   return Math.round(ms / 86_400_000);
 }
+
+/**
+ * Edad cumplida a partir de una fecha "YYYY-MM-DD".
+ *
+ * Es lo que se mira en la práctica —para una salida importa la edad, no el
+ * cumpleaños—, y se calcula contra la fecha de hoy en Chile.
+ */
+export function calcularEdad(fechaNacimiento: string | null): number | null {
+  if (!fechaNacimiento) return null;
+
+  const hoy = hoyISO();
+  const [anioN, mesN, diaN] = fechaNacimiento.split("-").map(Number);
+  const [anioH, mesH, diaH] = hoy.split("-").map(Number);
+  if (!anioN || !anioH) return null;
+
+  let edad = anioH - anioN;
+  // Todavía no cumple este año si el mes o el día no llegan.
+  if (mesH < mesN || (mesH === mesN && diaH < diaN)) edad--;
+
+  return edad >= 0 && edad < 130 ? edad : null;
+}

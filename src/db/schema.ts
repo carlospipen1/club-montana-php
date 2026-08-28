@@ -96,6 +96,7 @@ export const usuarios = pgTable(
     nombres: varchar("nombres", { length: 100 }).notNull(),
     apellidos: varchar("apellidos", { length: 100 }).notNull(),
     telefono: varchar("telefono", { length: 30 }),
+    fechaNacimiento: date("fecha_nacimiento"),
     fechaIngreso: date("fecha_ingreso"),
 
     contactoEmergenciaNombre: varchar("contacto_emergencia_nombre", { length: 120 }),
@@ -105,6 +106,16 @@ export const usuarios = pgTable(
     tipoMiembro: tipoMiembroEnum("tipo_miembro").notNull().default("general"),
     rol: rolEnum("rol").notNull().default("miembro"),
     estado: estadoUsuarioEnum("estado").notNull().default("activo"),
+
+    /**
+     * Distingue a un socio de una cuenta administrativa.
+     *
+     * Una cuenta con `esSocio` en falso puede entrar y administrar, pero no es
+     * una persona que pertenezca al club: no se le generan cuotas, no aparece
+     * en la tesorería y no cuenta en el total de socios. Es el caso de la
+     * cuenta de administración, separada de la cuenta personal de quien la usa.
+     */
+    esSocio: boolean("es_socio").notNull().default(true),
 
     /** Fuerza el cambio de contraseña en el próximo ingreso. */
     debeCambiarPassword: boolean("debe_cambiar_password").notNull().default(false),

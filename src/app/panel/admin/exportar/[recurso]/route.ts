@@ -11,7 +11,7 @@ import {
 } from "@/db/schema";
 import { usuarioActual } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
-import { hoyISO, MESES } from "@/lib/utils";
+import { calcularEdad, hoyISO, MESES } from "@/lib/utils";
 
 /**
  * Exporta una tabla a CSV.
@@ -84,9 +84,12 @@ export async function GET(
           "RUT",
           "Email",
           "Teléfono",
+          "Nacimiento",
+          "Edad",
           "Tipo",
           "Rol",
           "Estado",
+          "Es socio",
           "Ingreso",
           "Contacto emergencia",
           "Teléfono emergencia",
@@ -99,9 +102,12 @@ export async function GET(
           u.rut,
           u.email,
           u.telefono,
+          u.fechaNacimiento,
+          calcularEdad(u.fechaNacimiento),
           u.tipoMiembro,
           u.rol,
           u.estado,
+          u.esSocio ? "sí" : "no (cuenta administrativa)",
           u.fechaIngreso,
           u.contactoEmergenciaNombre,
           u.contactoEmergenciaTelefono,

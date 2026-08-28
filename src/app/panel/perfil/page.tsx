@@ -1,6 +1,6 @@
 import { requerirUsuario } from "@/lib/auth";
 import { ETIQUETAS_ROL } from "@/lib/permisos";
-import { formatearFecha } from "@/lib/utils";
+import { calcularEdad, formatearFecha } from "@/lib/utils";
 import { Insignia } from "@/components/ui/datos";
 import { CabeceraPagina, Tarjeta, TarjetaCabecera } from "@/components/ui/superficie";
 import { FormularioContacto, FormularioPassword } from "./formularios";
@@ -14,6 +14,12 @@ export default async function PaginaPerfil() {
     { etiqueta: "Nombre", valor: `${usuario.nombres} ${usuario.apellidos}` },
     { etiqueta: "Correo", valor: usuario.email },
     { etiqueta: "RUT", valor: usuario.rut ?? "—" },
+    {
+      etiqueta: "Fecha de nacimiento",
+      valor: usuario.fechaNacimiento
+        ? `${formatearFecha(usuario.fechaNacimiento)} · ${calcularEdad(usuario.fechaNacimiento)} años`
+        : "—",
+    },
     { etiqueta: "Rol", valor: ETIQUETAS_ROL[usuario.rol] },
     {
       etiqueta: "Tipo de socio",

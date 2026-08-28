@@ -87,9 +87,12 @@ export default async function PaginaCuotas({
     })
     .from(cuotasMensuales)
     .innerJoin(usuarios, eq(cuotasMensuales.usuarioId, usuarios.id))
+    // Las cuentas administrativas no aparecen en la tesorería: no son socios y
+    // no pagan cuota. Si alguna arrastra cuotas de antes de marcarse como tal,
+    // el filtro las deja fuera igual.
     .where(
       puedeGestionar
-        ? eq(cuotasMensuales.anio, anio)
+        ? and(eq(cuotasMensuales.anio, anio), eq(usuarios.esSocio, true))
         : and(
             eq(cuotasMensuales.anio, anio),
             eq(cuotasMensuales.usuarioId, usuario.id),

@@ -29,6 +29,13 @@
       "when": 1787772479110,
       "tag": "0003_nostalgic_mentallo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787922069100,
+      "tag": "0004_fluffy_juggernaut",
+      "breakpoints": true
     }
   ]
 }

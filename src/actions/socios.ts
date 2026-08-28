@@ -1,11 +1,11 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { usuarios } from "@/db/schema";
+import { cuotasMensuales, usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { generarPasswordTemporal, hashPassword } from "@/lib/password";
 import { formatearRut, validarRut } from "@/lib/rut";
@@ -34,6 +34,10 @@ const esquemaSocio = z.object({
   email: z.email("Escribe un correo válido.").trim().toLowerCase(),
   rut: rutValido,
   telefono: opcional(z.string().trim().max(30)),
+  fechaNacimiento: opcional(z.string().trim()),
+  // Una casilla no marcada no viaja en el formulario, de ahí el valor por
+  // defecto: si el campo no llega, la cuenta no es de socio.
+  esSocio: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
   tipoMiembro: z.enum(["general", "estudiante"]),
   rol: z.enum([
     "admin",
@@ -81,6 +85,8 @@ export async function accionCrearSocio(
         email: d.email,
         rut: d.rut ? formatearRut(d.rut) : null,
         telefono: d.telefono ?? null,
+        fechaNacimiento: d.fechaNacimiento || null,
+        esSocio: d.esSocio,
         tipoMiembro: d.tipoMiembro,
         rol: d.rol,
         fechaIngreso: d.fechaIngreso || null,
@@ -134,14 +140,35 @@ export async function accionActualizarSocio(
         email: d.email,
         rut: d.rut ? formatearRut(d.rut) : null,
         telefono: d.telefono ?? null,
+        fechaNacimiento: d.fechaNacimiento || null,
+        esSocio: d.esSocio,
         tipoMiembro: d.tipoMiembro,
         rol: d.rol,
         fechaIngreso: d.fechaIngreso || null,
       })
       .where(eq(usuarios.id, id));
 
+    // Al dejar de ser socio, se retiran sus cuotas pendientes: si no, quedarían
+    // sumando a la deuda del club para siempre, invisibles en la tesorería
+    // porque esa pantalla ya no lista cuentas administrativas.
+    //
+    // Sólo se borran las que nadie pagó. Un pago registrado es un hecho
+    // contable y no se borra por un cambio de configuración.
+    if (!d.esSocio) {
+      await db
+        .delete(cuotasMensuales)
+        .where(
+          and(eq(cuotasMensuales.usuarioId, id), eq(cuotasMensuales.montoPagado, 0)),
+        );
+    }
+
     revalidatePath("/panel/socios");
-    return exito("Datos actualizados.");
+    revalidatePath("/panel/cuotas");
+    return exito(
+      d.esSocio
+        ? "Datos actualizados."
+        : "Datos actualizados. Es una cuenta administrativa: se retiró de la tesorería.",
+    );
   } catch (error) {
     return (
       conflictoUnico(error, formData) ??

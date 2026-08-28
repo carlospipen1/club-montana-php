@@ -68,7 +68,9 @@ export async function accionHabilitarAnio(
   const socios = await db
     .select({ id: usuarios.id, tipoMiembro: usuarios.tipoMiembro })
     .from(usuarios)
-    .where(eq(usuarios.estado, "activo"));
+    // `esSocio` deja fuera a las cuentas administrativas: pueden entrar y
+    // gestionar, pero no son personas que paguen cuota.
+    .where(and(eq(usuarios.estado, "activo"), eq(usuarios.esSocio, true)));
 
   if (socios.length === 0) {
     return fallo("No hay socios activos a los que generarles cuotas.", formData);
@@ -128,7 +130,9 @@ export async function accionSincronizarSocios(
   const socios = await db
     .select({ id: usuarios.id, tipoMiembro: usuarios.tipoMiembro })
     .from(usuarios)
-    .where(eq(usuarios.estado, "activo"));
+    // `esSocio` deja fuera a las cuentas administrativas: pueden entrar y
+    // gestionar, pero no son personas que paguen cuota.
+    .where(and(eq(usuarios.estado, "activo"), eq(usuarios.esSocio, true)));
 
   const existentes = await db
     .select({ usuarioId: cuotasMensuales.usuarioId, mes: cuotasMensuales.mes })

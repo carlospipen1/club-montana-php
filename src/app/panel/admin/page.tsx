@@ -1,4 +1,4 @@
-import { count, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { Backpack, Database, Download, Mountain, Users, Wallet } from "lucide-react";
 
 import { db } from "@/db";
@@ -47,7 +47,8 @@ export default async function PaginaAdmin() {
     db
       .select({ sociosActivos: count() })
       .from(usuarios)
-      .where(eq(usuarios.estado, "activo")),
+      // Sólo personas: las cuentas administrativas no engrosan el total.
+      .where(and(eq(usuarios.estado, "activo"), eq(usuarios.esSocio, true))),
     db.select({ totalEquipos: count() }).from(equipos),
     db.select({ totalSalidas: count() }).from(salidas),
     db

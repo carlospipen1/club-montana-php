@@ -16,6 +16,7 @@ import { Boton } from "@/components/ui/boton";
 import { Campo, Input, Selector } from "@/components/ui/campos";
 import { DESCRIPCIONES_ROL, ETIQUETAS_ROL } from "@/lib/permisos";
 import { formatearRut } from "@/lib/rut";
+import { calcularEdad, hoyISO } from "@/lib/utils";
 import type { Rol, Usuario } from "@/db/schema";
 
 /* -------------------------------------------------------------------------- */
@@ -78,6 +79,11 @@ function CamposSocio({
 }) {
   const [rut, setRut] = useState(valores?.rut ?? socio?.rut ?? "");
   const [rol, setRol] = useState<Rol>((valores?.rol as Rol) ?? socio?.rol ?? "miembro");
+  // Controlado para poder mostrar la edad mientras se escribe la fecha.
+  const [fechaNacimiento, setFechaNacimiento] = useState(
+    valores?.fechaNacimiento ?? socio?.fechaNacimiento ?? "",
+  );
+  const edad = calcularEdad(fechaNacimiento || null);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -174,10 +180,25 @@ function CamposSocio({
       </Campo>
 
       <Campo
+        id="fechaNacimiento"
+        etiqueta="Fecha de nacimiento"
+        ayuda={edad !== null ? `${edad} años cumplidos.` : "Sirve para saber la edad."}
+        error={errores?.fechaNacimiento?.[0]}
+      >
+        <Input
+          id="fechaNacimiento"
+          name="fechaNacimiento"
+          type="date"
+          max={hoyISO()}
+          value={fechaNacimiento}
+          onChange={(e) => setFechaNacimiento(e.target.value)}
+        />
+      </Campo>
+
+      <Campo
         id="fechaIngreso"
         etiqueta="Fecha de ingreso al club"
         error={errores?.fechaIngreso?.[0]}
-        className="sm:col-span-2"
       >
         <Input
           id="fechaIngreso"
@@ -186,6 +207,25 @@ function CamposSocio({
           defaultValue={valores?.fechaIngreso ?? socio?.fechaIngreso ?? ""}
         />
       </Campo>
+
+      {/* Separa a las personas del club de las cuentas de operación. Una cuenta
+          administrativa entra y gestiona, pero no paga cuota ni cuenta como
+          socio en las estadísticas. */}
+      <label className="flex gap-3 rounded-lg bg-stone-50 p-4 ring-1 ring-stone-200 ring-inset sm:col-span-2">
+        <input
+          type="checkbox"
+          name="esSocio"
+          defaultChecked={valores ? valores.esSocio === "on" : (socio?.esSocio ?? true)}
+          className="text-brand-700 focus:ring-brand-500 mt-0.5 size-4 shrink-0 rounded border-stone-300"
+        />
+        <span className="text-sm">
+          <span className="block font-medium text-stone-800">Es socio del club</span>
+          <span className="block text-stone-500">
+            Desmárcalo para cuentas administrativas: no se le generan cuotas ni aparece
+            en la tesorería.
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

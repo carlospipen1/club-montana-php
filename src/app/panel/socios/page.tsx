@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { ETIQUETAS_ROL, puede } from "@/lib/permisos";
-import { formatearFecha } from "@/lib/utils";
+import { calcularEdad, formatearFecha } from "@/lib/utils";
 import { Boton } from "@/components/ui/boton";
 import { Input } from "@/components/ui/campos";
 import {
@@ -98,6 +98,7 @@ export default async function PaginaSocios({
               <tr>
                 <Th>Socio</Th>
                 <Th>RUT</Th>
+                <Th>Edad</Th>
                 <Th>Tipo</Th>
                 <Th>Rol</Th>
                 <Th>Ingreso</Th>
@@ -110,13 +111,19 @@ export default async function PaginaSocios({
                 <Fila key={socio.id}>
                   <Td>
                     <div className="min-w-0">
-                      <p className="font-medium text-stone-900">
-                        {socio.nombres} {socio.apellidos}
-                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-stone-900">
+                          {socio.nombres} {socio.apellidos}
+                        </p>
+                        {!socio.esSocio && <Insignia>Cuenta administrativa</Insignia>}
+                      </div>
                       <p className="text-xs text-stone-500">{socio.email}</p>
                     </div>
                   </Td>
                   <Td className="tabular whitespace-nowrap">{socio.rut ?? "—"}</Td>
+                  <Td className="tabular whitespace-nowrap">
+                    {calcularEdad(socio.fechaNacimiento) ?? "—"}
+                  </Td>
                   <Td>
                     <Insignia
                       tono={socio.tipoMiembro === "estudiante" ? "info" : "neutro"}
