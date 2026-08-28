@@ -5,8 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { equipos, prestamos } from "@/db/schema";
+import { equipos, estadoEquipoEnum, prestamos } from "@/db/schema";
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
+import { CATEGORIAS_EQUIPO } from "@/lib/equipos";
 import { notificarA, notificarAQuienesPueden } from "@/lib/notificar";
 import { hoyISO } from "@/lib/utils";
 import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
@@ -17,9 +18,10 @@ import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos"
 
 const esquemaEquipo = z.object({
   nombre: z.string().trim().min(2, "Escribe el nombre del equipo."),
-  categoria: z.string().trim().min(2, "Indica una categoría."),
+  // Lista cerrada y compartida con el formulario: ver src/lib/equipos.ts.
+  categoria: z.enum(CATEGORIAS_EQUIPO, "Elige una categoría de la lista."),
   descripcion: z.string().trim().optional(),
-  estado: z.enum(["disponible", "reservado", "prestado", "mantencion"]),
+  estado: z.enum(estadoEquipoEnum.enumValues),
   fechaAdquisicion: z.string().trim().optional(),
 });
 

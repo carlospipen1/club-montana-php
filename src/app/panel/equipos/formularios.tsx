@@ -13,19 +13,9 @@ import { useModalAccion } from "@/components/ui/usar-modal-accion";
 import { Aviso } from "@/components/ui/avisos";
 import { Boton } from "@/components/ui/boton";
 import { AreaTexto, Campo, Input, Selector } from "@/components/ui/campos";
+import { CATEGORIAS_EQUIPO } from "@/lib/equipos";
 import { hoyISO } from "@/lib/utils";
 import type { Equipo } from "@/db/schema";
-
-const CATEGORIAS = [
-  "Carpas",
-  "Sacos de dormir",
-  "Mochilas",
-  "Cuerdas y arneses",
-  "Crampones y piolets",
-  "Cocinillas",
-  "Navegación",
-  "Otro",
-];
 
 function CamposEquipo({
   equipo,
@@ -60,18 +50,18 @@ function CamposEquipo({
         requerido
         error={errores?.categoria?.[0]}
       >
-        <Input
+        <Selector
           id="categoria"
           name="categoria"
           defaultValue={valores?.categoria ?? equipo?.categoria}
-          list="categorias-equipo"
           required
-        />
-        <datalist id="categorias-equipo">
-          {CATEGORIAS.map((c) => (
-            <option key={c} value={c} />
+        >
+          {CATEGORIAS_EQUIPO.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
           ))}
-        </datalist>
+        </Selector>
       </Campo>
 
       <Campo id="estado" etiqueta="Estado" requerido>
