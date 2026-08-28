@@ -33,6 +33,26 @@ server action empieza con `requerirCapacidad(...)` o `requerirUsuario()`.
 `src/actions/tipos.ts`, consumida con `useActionState`. Los errores van por campo
 con la misma clave que el `name` del input.
 
+## Reglas del dominio que no son obvias
+
+**Un socio no es lo mismo que una cuenta.** La columna `esSocio` distingue a una
+persona del club de una cuenta de operación. Una cuenta administrativa entra y
+gestiona, pero no se le generan cuotas, no aparece en la tesorería y no cuenta en
+el total de socios. Se resolvió así y no excluyendo por rol: un socio de verdad
+puede además administrar el sistema, y atarlo a `rol = admin` lo habría dejado sin
+pagar cuota sin que nadie lo decidiera.
+
+Al desmarcar "Es socio del club" se retiran sus cuotas **impagas**. Las que tienen
+un pago registrado se conservan: un pago es un hecho contable y no se borra por un
+cambio de configuración.
+
+**Los montos de cuota se copian, no se referencian.** Cada cuota mensual guarda el
+monto que correspondía ese año. Subir la cuota no reescribe el pasado.
+
+**Las fotos se marcan, no se duplican.** Una foto pertenece a un álbum y tres
+banderas deciden dónde sale: portada del sitio (una en todo el sistema), en el
+carrusel (hasta 12) y portada del álbum.
+
 ## Trampas que ya nos costaron caro
 
 ### Subconsultas correlacionadas en Drizzle
