@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { cuotasMensuales, usuarios } from "@/db/schema";
+import { cuotasMensuales, rolEnum, usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { generarPasswordTemporal, hashPassword } from "@/lib/password";
 import { formatearRut, validarRut } from "@/lib/rut";
@@ -39,14 +39,10 @@ const esquemaSocio = z.object({
   // defecto: si el campo no llega, la cuenta no es de socio.
   esSocio: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
   tipoMiembro: z.enum(["general", "estudiante"]),
-  rol: z.enum([
-    "admin",
-    "presidente",
-    "tesorero",
-    "encargado_equipo",
-    "comision_tecnica",
-    "miembro",
-  ]),
+  // Los roles se leen del enum del esquema y no se escriben a mano: esta lista
+  // era una copia y se quedó sin `secretario` al agregar las actas, así que el
+  // formulario rechazaba ese rol como si faltara un campo.
+  rol: z.enum(rolEnum.enumValues),
   fechaIngreso: opcional(z.string().trim()),
 });
 
