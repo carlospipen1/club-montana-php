@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { albumes, fotos } from "@/db/schema";
 import { usuarioActual } from "@/lib/auth";
 import { guardarArchivo } from "@/lib/almacenamiento";
+import { modoDemo } from "@/lib/demo";
 import { puede } from "@/lib/permisos";
 
 /**
@@ -29,6 +30,17 @@ export async function POST(request: Request) {
   }
   if (!puede(usuario.rol, "gestionarGaleria")) {
     return Response.json({ error: "Sin permiso" }, { status: 403 });
+  }
+  // Única acción desactivada en la demostración: el almacenamiento se paga y
+  // queda abierto a que cualquiera suba cualquier cosa. Todo el resto funciona.
+  if (modoDemo) {
+    return Response.json(
+      {
+        error:
+          "Sistema de demostración: subir fotos está desactivado. El resto de la galería sí funciona.",
+      },
+      { status: 403 },
+    );
   }
 
   const formData = await request.formData();

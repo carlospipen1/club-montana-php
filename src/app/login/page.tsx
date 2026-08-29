@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Mountain } from "lucide-react";
 
 import { usuarioActual } from "@/lib/auth";
+import { CuentasDemo } from "@/components/cuentas-demo";
 import { FormularioLogin } from "./formulario";
 
 export const metadata: Metadata = {
@@ -30,6 +31,8 @@ export default async function PaginaLogin({ searchParams }: PageProps<"/login">)
           </h1>
           <p className="text-sm text-stone-500">Club de Montaña Collipulli</p>
         </div>
+
+        <CuentasDemo />
 
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-xs">
           <FormularioLogin siguiente={destino} />

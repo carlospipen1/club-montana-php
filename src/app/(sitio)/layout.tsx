@@ -1,4 +1,5 @@
 import { Cabecera, Pie } from "@/components/landing/cabecera";
+import { AvisoDemo } from "@/components/aviso-demo";
 import { hayAlbumesPublicados } from "@/lib/consultas-galeria";
 
 /**
@@ -28,6 +29,7 @@ export default async function LayoutSitio({ children }: LayoutProps<"/">) {
 
   return (
     <>
+      <AvisoDemo />
       <Cabecera hayAlbumes={hayAlbumes} />
       {children}
       <Pie />

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { cuotasMensuales, rolEnum, usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
+import { bloqueadoEnDemo, esCuentaDemo } from "@/lib/demo";
 import { generarPasswordTemporal, hashPassword } from "@/lib/password";
 import { formatearRut, validarRut } from "@/lib/rut";
 import { notificarA } from "@/lib/notificar";
@@ -152,6 +153,20 @@ export async function accionActualizarSocio(
 
   const d = parseado.data;
 
+  const [objetivo] = await db
+    .select({ email: usuarios.email })
+    .from(usuarios)
+    .where(eq(usuarios.id, id))
+    .limit(1);
+
+  // Cambiarle el correo o el rol a una cuenta de muestra rompería el acceso de
+  // la siguiente persona que entre a probar.
+  if (objetivo && esCuentaDemo(objetivo.email)) {
+    return bloqueadoEnDemo(
+      "las cuentas de muestra no se pueden editar. Prueba editando cualquier otro socio.",
+    );
+  }
+
   try {
     await db
       .update(usuarios)
@@ -208,6 +223,15 @@ export async function accionCambiarEstadoSocio(formData: FormData) {
   // Nadie puede desactivarse a sí mismo y quedar fuera de su propia sesión.
   if (id === autor.id) return;
 
+  const [objetivo] = await db
+    .select({ email: usuarios.email })
+    .from(usuarios)
+    .where(eq(usuarios.id, id))
+    .limit(1);
+
+  // Desactivar una cuenta de muestra la dejaría fuera del login para siempre.
+  if (!objetivo || esCuentaDemo(objetivo.email)) return;
+
   await db
     .update(usuarios)
     .set({ estado: activar ? "activo" : "inactivo" })
@@ -232,6 +256,14 @@ export async function accionResetearPassword(
     .limit(1);
 
   if (!socio) return fallo("El socio no existe.", formData);
+
+  // Resetear la clave de una cuenta de muestra dejaría a la siguiente persona
+  // sin poder entrar: el login verifica la contraseña antes de resembrar.
+  if (esCuentaDemo(socio.email)) {
+    return bloqueadoEnDemo(
+      "no se puede resetear la contraseña de una cuenta de muestra. Prueba con cualquier otro socio.",
+    );
+  }
 
   const passwordTemporal = generarPasswordTemporal();
 

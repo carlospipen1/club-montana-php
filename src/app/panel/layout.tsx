@@ -8,6 +8,7 @@ import { requerirUsuario } from "@/lib/auth";
 import { ETIQUETAS_ROL } from "@/lib/permisos";
 import { BarraLateral, MenuMovil } from "@/components/panel/navegacion";
 import { MenuUsuario } from "@/components/panel/menu-usuario";
+import { AvisoDemo } from "@/components/aviso-demo";
 
 export default async function LayoutPanel({ children }: LayoutProps<"/panel">) {
   const usuario = await requerirUsuario();
@@ -23,6 +24,8 @@ export default async function LayoutPanel({ children }: LayoutProps<"/panel">) {
 
   return (
     <div className="flex min-h-full flex-col">
+      <AvisoDemo />
+
       <header className="sticky top-0 z-40 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="flex h-14 items-center gap-3 px-4">
           <MenuMovil rol={usuario.rol} noLeidas={noLeidas} />
