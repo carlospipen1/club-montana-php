@@ -199,17 +199,6 @@ export default async function PaginaInicio() {
           </svg>
         )}
 
-        {/* El escudo va arriba a la derecha, sobre el cielo: centrado tapaba las
-            caras de quienes salen en la foto. */}
-        <Image
-          src="/logo.png"
-          alt="Escudo del Club de Montaña Collipulli"
-          width={320}
-          height={320}
-          className="absolute top-5 right-4 z-10 size-20 object-contain drop-shadow-xl sm:top-8 sm:right-8 sm:size-28 lg:size-32"
-          priority
-        />
-
         {/* `w-full` es lo que permite que el centrado vertical de la sección
             funcione: sin ancho propio, el bloque se encoge al texto. */}
         <div className="relative mx-auto w-full max-w-3xl px-4 py-20 text-center sm:px-6 sm:py-24">
