@@ -137,3 +137,9 @@ export const ESTADO_ACTA: Record<string, { texto: string; tono: Tono }> = {
   borrador: { texto: "Borrador", tono: "atencion" },
   publicada: { texto: "Publicada", tono: "exito" },
 };
+
+export const ESTADO_REUNION: Record<string, { texto: string; tono: Tono }> = {
+  convocada: { texto: "Convocada", tono: "info" },
+  realizada: { texto: "Realizada", tono: "neutro" },
+  cancelada: { texto: "Cancelada", tono: "alerta" },
+};

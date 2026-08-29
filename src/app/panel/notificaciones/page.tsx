@@ -8,6 +8,7 @@ import {
   Info,
   Mountain,
   Trash2,
+  Users,
   Wallet,
 } from "lucide-react";
 
@@ -30,6 +31,7 @@ const ICONOS = {
   salida: Mountain,
   cuota: Wallet,
   acta: FileText,
+  reunion: Users,
   sistema: Info,
 } as const;
 

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { actas } from "@/db/schema";
+import { actas, reuniones } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { notificarATodos } from "@/lib/notificar";
 import {
@@ -18,6 +18,13 @@ import {
 } from "./tipos";
 
 const esquemaActa = z.object({
+  /**
+   * La reunión de la que se deja constancia. Si viene vacío, se crea una con
+   * los datos que el acta ya trae: así redactar el acta de algo que se acordó
+   * por teléfono, o cargar un acta vieja en papel, sigue siendo un solo
+   * formulario, sin que por eso existan actas huérfanas.
+   */
+  reunionId: z.coerce.number().int().positive().optional(),
   anio: z.coerce.number().int().min(1990).max(2100),
   numero: z.coerce.number().int().min(1, "El número debe ser 1 o mayor."),
   tipo: z.enum(["asamblea_ordinaria", "asamblea_extraordinaria", "directiva"]),
@@ -61,25 +68,51 @@ export async function accionCrearActa(
   let creadaId: number;
 
   try {
-    const [creada] = await db
-      .insert(actas)
-      .values({
-        anio: d.anio,
-        numero: d.numero,
-        tipo: d.tipo,
-        titulo: d.titulo,
-        fecha: d.fecha,
-        lugar: d.lugar || null,
-        cuerpo: d.cuerpo,
-        // Nace como borrador: nadie más la ve hasta que el secretario publique.
-        estado: "borrador",
-        redactadaPor: autor.id,
-        actualizadaPor: autor.id,
-      })
-      .returning({ id: actas.id });
+    creadaId = await db.transaction(async (tx) => {
+      let reunionId = d.reunionId;
 
-    creadaId = creada.id;
+      if (!reunionId) {
+        // Reunión registrada a posteriori: nace ya realizada y sin
+        // `convocadaEn`, que es la marca de que nunca se anunció por el
+        // sistema. La hora queda al mediodía porque el acta sólo trae la
+        // fecha; las pantallas no muestran hora cuando no hubo convocatoria.
+        const [reunion] = await tx
+          .insert(reuniones)
+          .values({
+            tipo: d.tipo,
+            titulo: d.titulo,
+            fechaHora: new Date(`${d.fecha}T12:00:00`),
+            lugar: d.lugar || null,
+            estado: "realizada",
+            convocadaPor: autor.id,
+          })
+          .returning({ id: reuniones.id });
+
+        reunionId = reunion.id;
+      }
+
+      const [creada] = await tx
+        .insert(actas)
+        .values({
+          reunionId,
+          anio: d.anio,
+          numero: d.numero,
+          tipo: d.tipo,
+          titulo: d.titulo,
+          fecha: d.fecha,
+          lugar: d.lugar || null,
+          cuerpo: d.cuerpo,
+          // Nace como borrador: nadie más la ve hasta que se publique.
+          estado: "borrador",
+          redactadaPor: autor.id,
+          actualizadaPor: autor.id,
+        })
+        .returning({ id: actas.id });
+
+      return creada.id;
+    });
   } catch (error) {
+    console.error("accionCrearActa: falló la creación", error);
     return (
       numeroRepetido(error, formData) ?? fallo("No se pudo crear el acta.", formData)
     );

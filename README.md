@@ -170,21 +170,23 @@ legacy/                   Sistema PHP anterior — sólo referencia, se puede bo
 Los permisos se declaran **por capacidad**, no por rol, en `src/lib/permisos.ts`.
 Las pantallas preguntan por la capacidad; ninguna comprueba el rol a mano.
 
-| Capacidad            | admin | tesorero | encargado_equipo | comision_tecnica | secretario |
-| -------------------- | :---: | :------: | :--------------: | :--------------: | :--------: |
-| `verSocios`          |  ✓    |          |                  |                  |            |
-| `gestionarSocios`    |  ✓    |          |                  |                  |            |
-| `gestionarCuotas`    |  ✓    |    ✓     |                  |                  |            |
-| `gestionarEquipos`   |  ✓    |          |        ✓         |                  |            |
-| `gestionarPrestamos` |  ✓    |          |        ✓         |                  |            |
-| `gestionarSalidas`   |  ✓    |          |                  |        ✓         |            |
-| `gestionarActas`     |  ✓    |          |                  |                  |     ✓      |
-| `gestionarGaleria`   |  ✓    |          |                  |                  |            |
-| `administrarSistema` |  ✓    |          |                  |                  |            |
+| Capacidad             | admin | presidente | tesorero | encargado_equipo | comision_tecnica | secretario |
+| --------------------- | :---: | :--------: | :------: | :--------------: | :--------------: | :--------: |
+| `verSocios`           |  ✓    |            |          |                  |                  |            |
+| `gestionarSocios`     |  ✓    |            |          |                  |                  |            |
+| `gestionarCuotas`     |  ✓    |            |    ✓     |                  |                  |            |
+| `gestionarEquipos`    |  ✓    |            |          |        ✓         |                  |            |
+| `gestionarPrestamos`  |  ✓    |            |          |        ✓         |                  |            |
+| `gestionarSalidas`    |  ✓    |            |          |                  |        ✓         |            |
+| `gestionarReuniones`  |  ✓    |     ✓      |          |                  |                  |     ✓      |
+| `gestionarActas`      |  ✓    |     ✓      |          |                  |                  |     ✓      |
+| `gestionarGaleria`    |  ✓    |            |          |                  |                  |            |
+| `administrarSistema`  |  ✓    |            |          |                  |                  |            |
 
-Los roles **presidente** y **miembro** no aparecen en la tabla porque no tienen
-ninguna capacidad de gestión: el club decidió que la presidencia no administra el
-sistema.
+El rol **miembro** no aparece en la tabla porque no tiene ninguna capacidad de
+gestión. La **presidencia** sólo convoca reuniones y redacta actas, junto con la
+secretaría: en el club las dos cosas las hacen ambos indistintamente. No
+administra el resto del sistema.
 
 Lo que puede **cualquier socio activo**, sin permiso especial: ver las salidas e
 inscribirse, solicitar equipo prestado, leer las actas publicadas, consultar sus

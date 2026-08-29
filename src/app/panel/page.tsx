@@ -1,11 +1,26 @@
 import Link from "next/link";
 import { and, asc, count, desc, eq, gte, inArray, sql } from "drizzle-orm";
-import { Backpack, Bell, Mountain, TriangleAlert, Wallet } from "lucide-react";
+import {
+  Backpack,
+  Bell,
+  CalendarDays,
+  MapPin,
+  Mountain,
+  TriangleAlert,
+  Wallet,
+} from "lucide-react";
 
 import { db } from "@/db";
-import { cuotasMensuales, notificaciones, prestamos, salidas } from "@/db/schema";
+import {
+  cuotasMensuales,
+  notificaciones,
+  prestamos,
+  reuniones,
+  salidas,
+} from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { formatearCLP, formatearFecha, MESES, tiempoRelativo } from "@/lib/utils";
+import { ETIQUETAS_TIPO_REUNION, formatearCuando } from "@/lib/reuniones";
 import { BotonEnlace } from "@/components/ui/boton";
 import { Aviso } from "@/components/ui/avisos";
 import { DIFICULTAD, InsigniaEstado } from "@/components/ui/datos";
@@ -24,72 +39,92 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
   const { error } = await searchParams;
   const anio = new Date().getFullYear();
 
-  const [proximasSalidas, misCuotas, misPrestamos, ultimasNotificaciones] =
-    await Promise.all([
-      db
-        .select({
-          id: salidas.id,
-          nombre: salidas.nombre,
-          lugar: salidas.lugar,
-          fechaSalida: salidas.fechaSalida,
-          nivelDificultad: salidas.nivelDificultad,
-          cupoMaximo: salidas.cupoMaximo,
-          // Los nombres van escritos completos: interpolando las columnas del
-          // esquema, Drizzle las emite sin calificar y dentro de la subconsulta
-          // `salida_id = id` se resuelve como `inscripciones.salida_id =
-          // inscripciones.id`. El conteo salía mal sin dar error.
-          inscritos: sql<number>`(
+  const [
+    proximasReuniones,
+    proximasSalidas,
+    misCuotas,
+    misPrestamos,
+    ultimasNotificaciones,
+  ] = await Promise.all([
+    // Las reuniones convocadas van arriba de todo: es lo que el club necesita
+    // que nadie se pierda, y a diferencia de una salida no se puede recuperar
+    // después.
+    db
+      .select({
+        id: reuniones.id,
+        tipo: reuniones.tipo,
+        titulo: reuniones.titulo,
+        fechaHora: reuniones.fechaHora,
+        lugar: reuniones.lugar,
+      })
+      .from(reuniones)
+      .where(
+        and(gte(reuniones.fechaHora, new Date()), eq(reuniones.estado, "convocada")),
+      )
+      .orderBy(asc(reuniones.fechaHora))
+      .limit(2),
+
+    db
+      .select({
+        id: salidas.id,
+        nombre: salidas.nombre,
+        lugar: salidas.lugar,
+        fechaSalida: salidas.fechaSalida,
+        nivelDificultad: salidas.nivelDificultad,
+        cupoMaximo: salidas.cupoMaximo,
+        // Los nombres van escritos completos: interpolando las columnas del
+        // esquema, Drizzle las emite sin calificar y dentro de la subconsulta
+        // `salida_id = id` se resuelve como `inscripciones.salida_id =
+        // inscripciones.id`. El conteo salía mal sin dar error.
+        inscritos: sql<number>`(
             select count(*)::int from inscripciones
             where inscripciones.salida_id = salidas.id
           )`,
-          yaInscrito: sql<boolean>`exists (
+        yaInscrito: sql<boolean>`exists (
             select 1 from inscripciones
             where inscripciones.salida_id = salidas.id
               and inscripciones.usuario_id = ${usuario.id}
           )`,
-        })
-        .from(salidas)
-        .where(
-          and(
-            gte(salidas.fechaSalida, new Date()),
-            inArray(salidas.estado, ["planificada", "en_curso"]),
-          ),
-        )
-        .orderBy(asc(salidas.fechaSalida))
-        .limit(4),
-
-      db
-        .select({
-          mes: cuotasMensuales.mes,
-          montoEsperado: cuotasMensuales.montoEsperado,
-          montoPagado: cuotasMensuales.montoPagado,
-        })
-        .from(cuotasMensuales)
-        .where(
-          and(
-            eq(cuotasMensuales.usuarioId, usuario.id),
-            eq(cuotasMensuales.anio, anio),
-          ),
-        )
-        .orderBy(asc(cuotasMensuales.mes)),
-
-      db
-        .select({ total: count() })
-        .from(prestamos)
-        .where(
-          and(
-            eq(prestamos.usuarioId, usuario.id),
-            inArray(prestamos.estado, ["pendiente", "aprobado"]),
-          ),
+      })
+      .from(salidas)
+      .where(
+        and(
+          gte(salidas.fechaSalida, new Date()),
+          inArray(salidas.estado, ["planificada", "en_curso"]),
         ),
+      )
+      .orderBy(asc(salidas.fechaSalida))
+      .limit(4),
 
-      db
-        .select()
-        .from(notificaciones)
-        .where(eq(notificaciones.usuarioId, usuario.id))
-        .orderBy(desc(notificaciones.creadoEn))
-        .limit(5),
-    ]);
+    db
+      .select({
+        mes: cuotasMensuales.mes,
+        montoEsperado: cuotasMensuales.montoEsperado,
+        montoPagado: cuotasMensuales.montoPagado,
+      })
+      .from(cuotasMensuales)
+      .where(
+        and(eq(cuotasMensuales.usuarioId, usuario.id), eq(cuotasMensuales.anio, anio)),
+      )
+      .orderBy(asc(cuotasMensuales.mes)),
+
+    db
+      .select({ total: count() })
+      .from(prestamos)
+      .where(
+        and(
+          eq(prestamos.usuarioId, usuario.id),
+          inArray(prestamos.estado, ["pendiente", "aprobado"]),
+        ),
+      ),
+
+    db
+      .select()
+      .from(notificaciones)
+      .where(eq(notificaciones.usuarioId, usuario.id))
+      .orderBy(desc(notificaciones.creadoEn))
+      .limit(5),
+  ]);
 
   const cuotasPendientes = misCuotas.filter((c) => c.montoPagado < c.montoEsperado);
   const deuda = cuotasPendientes.reduce(
@@ -161,6 +196,45 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
           tono={noLeidas > 0 ? "atencion" : "neutro"}
         />
       </div>
+
+      {/* Va antes que todo lo demás y con color: una reunión ocurre una vez y a
+          una hora, y si el socio no la ve a tiempo no hay forma de recuperarla.
+          Una salida, en cambio, sigue ahí mañana. */}
+      {proximasReuniones.length > 0 && (
+        <div className="space-y-3">
+          {proximasReuniones.map((r) => (
+            <Link
+              key={r.id}
+              href={`/panel/reuniones/${r.id}`}
+              className="border-brand-200 bg-brand-50 hover:border-brand-300 flex flex-wrap items-start gap-4 rounded-xl border p-5 transition-colors"
+            >
+              <span className="bg-brand-700 flex size-10 shrink-0 items-center justify-center rounded-lg text-white">
+                <CalendarDays className="size-5" aria-hidden />
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="text-brand-800 block text-xs font-medium tracking-wide uppercase">
+                  {ETIQUETAS_TIPO_REUNION[r.tipo]}
+                </span>
+                <span className="mt-0.5 block font-semibold text-stone-900">
+                  {r.titulo}
+                </span>
+                <span className="mt-1 block text-sm text-stone-600 first-letter:uppercase">
+                  {formatearCuando(r.fechaHora)}
+                </span>
+                {r.lugar && (
+                  <span className="mt-1 flex items-center gap-1.5 text-sm text-stone-600">
+                    <MapPin className="size-3.5 text-stone-400" aria-hidden />
+                    {r.lugar}
+                  </span>
+                )}
+              </span>
+
+              <span className="text-brand-700 text-sm font-medium">Ver la tabla</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Tarjeta className="lg:col-span-2">

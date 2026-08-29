@@ -35,6 +35,12 @@ export const tipoActaEnum = pgEnum("tipo_acta", [
 
 export const estadoActaEnum = pgEnum("estado_acta", ["borrador", "publicada"]);
 
+export const estadoReunionEnum = pgEnum("estado_reunion", [
+  "convocada",
+  "realizada",
+  "cancelada",
+]);
+
 export const estadoAlbumEnum = pgEnum("estado_album", ["borrador", "publicado"]);
 
 export const tipoMiembroEnum = pgEnum("tipo_miembro", ["general", "estudiante"]);
@@ -79,6 +85,7 @@ export const tipoNotificacionEnum = pgEnum("tipo_notificacion", [
   "salida",
   "cuota",
   "acta",
+  "reunion",
   "sistema",
 ]);
 
@@ -285,10 +292,89 @@ export const cuotasMensuales = pgTable(
  * una, pero queda editable para poder continuar una numeración que venga de
  * antes del sistema.
  */
+/**
+ * Una reunión del club: la convocatoria, no el registro de lo que se acordó.
+ *
+ * Deliberadamente no se modeló como una salida. Una salida arrastra dificultad,
+ * equipo requerido y cupo, que para una reunión no significan nada, y además
+ * aparecería en la lista pública de próximas salidas siendo un asunto interno.
+ *
+ * `convocadaEn` distingue las reuniones que se anunciaron por el sistema de las
+ * que se crearon después, al redactar el acta de algo que se acordó por
+ * teléfono o que viene en papel de años anteriores.
+ */
+export const reuniones = pgTable(
+  "reuniones",
+  {
+    id: serial("id").primaryKey(),
+    tipo: tipoActaEnum("tipo").notNull().default("asamblea_ordinaria"),
+    titulo: varchar("titulo", { length: 200 }).notNull(),
+    fechaHora: timestamp("fecha_hora", { withTimezone: true }).notNull(),
+    lugar: varchar("lugar", { length: 200 }),
+    /** El orden del día, tal como se manda en la convocatoria. */
+    tabla: text("tabla"),
+    estado: estadoReunionEnum("estado").notNull().default("convocada"),
+
+    convocadaPor: integer("convocada_por").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    /** Nulo si la reunión se registró después de ocurrida, sin anunciarse. */
+    convocadaEn: timestamp("convocada_en", { withTimezone: true }),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+    actualizadoEn: timestamp("actualizado_en", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("reuniones_fecha_idx").on(t.fechaHora),
+    index("reuniones_estado_idx").on(t.estado),
+  ],
+);
+
+/**
+ * Quién asistió. La marca quien redacta el acta, después de la reunión, que es
+ * como se hace hoy en el club: no hay confirmación previa de los socios.
+ *
+ * La ausencia se representa por ausencia de fila. Los matices —"avisó que no
+ * podía"— van en el cuerpo del acta, que es texto libre.
+ */
+export const asistencias = pgTable(
+  "asistencias",
+  {
+    id: serial("id").primaryKey(),
+    reunionId: integer("reunion_id")
+      .notNull()
+      .references(() => reuniones.id, { onDelete: "cascade" }),
+    usuarioId: integer("usuario_id")
+      .notNull()
+      .references(() => usuarios.id, { onDelete: "cascade" }),
+    registradoEn: timestamp("registrado_en", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    unique("asistencia_unica").on(t.reunionId, t.usuarioId),
+    index("asistencias_reunion_idx").on(t.reunionId),
+  ],
+);
+
 export const actas = pgTable(
   "actas",
   {
     id: serial("id").primaryKey(),
+    /**
+     * Toda acta pertenece a una reunión, sin excepciones.
+     *
+     * Se evaluó permitir actas sueltas para los casos en que no hubo
+     * convocatoria previa, y se descartó: la excepción se habría vuelto el
+     * camino corto, y en un año la mitad de las actas estarían mal clasificadas
+     * sólo para saltarse un paso. En vez de eso, el formulario del acta crea la
+     * reunión sobre la marcha cuando no existe, con la fecha y el lugar que de
+     * todos modos hay que escribir.
+     */
+    reunionId: integer("reunion_id")
+      .notNull()
+      .references(() => reuniones.id, { onDelete: "restrict" }),
     anio: integer("anio").notNull(),
     numero: integer("numero").notNull(),
     tipo: tipoActaEnum("tipo").notNull().default("asamblea_ordinaria"),
@@ -493,7 +579,32 @@ export const actasRelations = relations(actas, ({ one }) => ({
     fields: [actas.redactadaPor],
     references: [usuarios.id],
   }),
+  reunion: one(reuniones, {
+    fields: [actas.reunionId],
+    references: [reuniones.id],
+  }),
+}));
+
+export const reunionesRelations = relations(reuniones, ({ one, many }) => ({
+  convocante: one(usuarios, {
+    fields: [reuniones.convocadaPor],
+    references: [usuarios.id],
+  }),
+  asistencias: many(asistencias),
+}));
+
+export const asistenciasRelations = relations(asistencias, ({ one }) => ({
+  reunion: one(reuniones, {
+    fields: [asistencias.reunionId],
+    references: [reuniones.id],
+  }),
+  socio: one(usuarios, {
+    fields: [asistencias.usuarioId],
+    references: [usuarios.id],
+  }),
 }));
 
 export type Acta = typeof actas.$inferSelect;
 export type TipoActa = (typeof tipoActaEnum.enumValues)[number];
+export type Reunion = typeof reuniones.$inferSelect;
+export type EstadoReunion = (typeof estadoReunionEnum.enumValues)[number];

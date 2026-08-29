@@ -36,6 +36,13 @@
       "when": 1787922069100,
       "tag": "0004_fluffy_juggernaut",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788041441490,
+      "tag": "0005_strange_viper",
+      "breakpoints": true
     }
   ]
 }

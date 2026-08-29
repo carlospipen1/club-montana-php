@@ -16,10 +16,17 @@ export function FormularioActa({
   acta,
   numeroSugerido,
   anioSugerido,
+  reunionId,
 }: {
   acta?: Acta;
   numeroSugerido?: number;
   anioSugerido?: number;
+  /**
+   * La reunión de la que se deja constancia, cuando se llega desde ella. Si no
+   * viene, la acción crea una con los datos del acta: toda acta pertenece a una
+   * reunión, pero eso no puede costarle un paso extra a quien la redacta.
+   */
+  reunionId?: number;
 }) {
   const editando = Boolean(acta);
   const [estado, accion] = useActionState(
@@ -31,6 +38,9 @@ export function FormularioActa({
   return (
     <form action={accion} className="space-y-5" noValidate>
       {acta && <input type="hidden" name="id" value={acta.id} />}
+      {!editando && reunionId && (
+        <input type="hidden" name="reunionId" value={reunionId} />
+      )}
 
       {estado.mensaje && (
         <Aviso tono={estado.ok ? "exito" : "error"}>{estado.mensaje}</Aviso>

@@ -4,11 +4,13 @@ import { sql } from "drizzle-orm";
 import { db } from "./index";
 import {
   actas,
+  asistencias,
   cuotasAnuales,
   cuotasMensuales,
   equipos,
   inscripciones,
   prestamos,
+  reuniones,
   salidas,
   usuarios,
 } from "./schema";
@@ -48,6 +50,7 @@ export async function sembrarDemo(): Promise<void> {
     truncate table
       notificaciones, fotos, albumes, actas,
       cuotas_mensuales, cuotas_anuales,
+      asistencias, reuniones,
       inscripciones, salidas, prestamos, equipos, usuarios
     restart identity cascade
   `);
@@ -267,10 +270,60 @@ export async function sembrarDemo(): Promise<void> {
   }
   await db.insert(cuotasMensuales).values(filas);
 
-  /* --- Actas --------------------------------------------------------------- */
+  /* --- Reuniones y actas --------------------------------------------------- */
+
+  await db.insert(reuniones).values([
+    {
+      tipo: "asamblea_ordinaria",
+      titulo: "Asamblea ordinaria de marzo",
+      fechaHora: new Date("2026-03-14T22:00:00Z"),
+      lugar: "Sede del club",
+      tabla: "1. Cuenta del ejercicio anterior.\n2. Cuota anual 2026.\n3. Renovación de carpas.",
+      estado: "realizada",
+      convocadaPor: 6,
+      convocadaEn: new Date("2026-03-05T13:00:00Z"),
+    },
+    {
+      tipo: "directiva",
+      titulo: "Reunión de directiva de junio",
+      fechaHora: new Date("2026-06-04T22:30:00Z"),
+      lugar: "Sede del club",
+      tabla: "1. Calendario del segundo semestre.\n2. Compra de un piolet.\n3. Plazos de devolución de equipo.",
+      estado: "realizada",
+      convocadaPor: 6,
+      convocadaEn: new Date("2026-05-30T14:00:00Z"),
+    },
+    {
+      tipo: "asamblea_extraordinaria",
+      titulo: "Asamblea extraordinaria de agosto",
+      fechaHora: new Date("2026-08-22T22:00:00Z"),
+      lugar: "Sede del club",
+      estado: "realizada",
+      convocadaPor: 6,
+      convocadaEn: new Date("2026-08-15T12:00:00Z"),
+    },
+    {
+      // La que aún no ocurre: es la que se ve en el inicio de cada socio.
+      tipo: "asamblea_ordinaria",
+      titulo: "Asamblea ordinaria de septiembre",
+      fechaHora: new Date("2026-09-18T22:30:00Z"),
+      lugar: "Sede del club, Collipulli",
+      tabla: "1. Balance del primer semestre.\n2. Calendario de salidas de primavera.\n3. Estado de la morosidad.\n4. Varios.",
+      estado: "convocada",
+      convocadaPor: 6,
+      convocadaEn: new Date("2026-08-28T15:00:00Z"),
+    },
+  ]);
+
+  // Asistencia de las dos primeras, como la deja quien redacta el acta.
+  await db.insert(asistencias).values([
+    ...[2, 3, 6, 7, 8, 9].map((usuarioId) => ({ reunionId: 1, usuarioId })),
+    ...[2, 4, 5, 6].map((usuarioId) => ({ reunionId: 2, usuarioId })),
+  ]);
 
   await db.insert(actas).values([
     {
+      reunionId: 1,
       anio: 2026,
       numero: 1,
       tipo: "asamblea_ordinaria",
@@ -284,6 +337,7 @@ export async function sembrarDemo(): Promise<void> {
       publicadaEn: new Date("2026-03-16T12:00:00Z"),
     },
     {
+      reunionId: 2,
       anio: 2026,
       numero: 2,
       tipo: "directiva",
@@ -297,6 +351,7 @@ export async function sembrarDemo(): Promise<void> {
       publicadaEn: new Date("2026-06-06T09:30:00Z"),
     },
     {
+      reunionId: 3,
       anio: 2026,
       numero: 3,
       tipo: "asamblea_extraordinaria",

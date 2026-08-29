@@ -18,8 +18,16 @@ export const CAPACIDADES = {
   gestionarPrestamos: ["admin", "encargado_equipo"],
   /** Publicar y editar salidas. Inscribirse no requiere permiso. */
   gestionarSalidas: ["admin", "comision_tecnica"],
+  /**
+   * Convocar reuniones y registrar quién asistió. Verlas no requiere permiso.
+   *
+   * El presidente entra acá y en las actas: es la primera atribución que se le
+   * da, y responde a cómo funciona el club de verdad, donde presidente y
+   * secretario convocan y redactan indistintamente.
+   */
+  gestionarReuniones: ["admin", "presidente", "secretario"],
   /** Redactar y publicar actas. Leerlas no requiere permiso. */
-  gestionarActas: ["admin", "secretario"],
+  gestionarActas: ["admin", "presidente", "secretario"],
   /** Álbumes, fotos y qué aparece en la portada. */
   gestionarGaleria: ["admin"],
   administrarSistema: ["admin"],
@@ -44,10 +52,10 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
 /** Qué hace cada rol, para orientar a quien crea un socio. */
 export const DESCRIPCIONES_ROL: Record<Rol, string> = {
   admin: "Acceso completo, incluida la administración del sistema.",
-  presidente: "Sin atribuciones de gestión: los mismos accesos que un socio.",
+  presidente: "Convoca reuniones y redacta actas, igual que el secretario.",
   tesorero: "Gestiona las cuotas: habilita años y registra pagos.",
   encargado_equipo: "Administra el inventario y resuelve las solicitudes de préstamo.",
   comision_tecnica: "Publica y edita las salidas del club.",
-  secretario: "Redacta y publica las actas de las reuniones.",
+  secretario: "Convoca reuniones y redacta las actas.",
   miembro: "Ve salidas y actas, se inscribe, solicita equipo y consulta sus cuotas.",
 };

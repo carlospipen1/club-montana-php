@@ -8,6 +8,7 @@ import {
   Activity,
   Backpack,
   Bell,
+  CalendarDays,
   ClipboardCheck,
   FileText,
   Images,
@@ -45,6 +46,9 @@ const SECCIONES: { titulo?: string; items: Item[] }[] = [
     titulo: "Club",
     items: [
       { href: "/panel/salidas", etiqueta: "Salidas", Icono: Mountain },
+      // Sin `requiere`: cualquier socio ve las reuniones convocadas, aunque
+      // sólo la directiva pueda crearlas.
+      { href: "/panel/reuniones", etiqueta: "Reuniones", Icono: CalendarDays },
       { href: "/panel/actas", etiqueta: "Actas", Icono: FileText },
       {
         href: "/panel/galeria",
