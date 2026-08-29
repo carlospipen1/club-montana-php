@@ -21,6 +21,13 @@ import {
 const opcional = (s: z.ZodString) =>
   z.preprocess((v) => (v === "" ? undefined : v), s.optional());
 
+/** Lo que envía un `<input type="date">`. Cualquier otra cosa se rechaza acá y
+ *  no en el motor de la base, que sólo sabe responder con una excepción. */
+const fechaISO = z
+  .string()
+  .trim()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Usa una fecha con el formato AAAA-MM-DD.");
+
 const rutValido = z
   .string()
   .trim()
@@ -34,7 +41,10 @@ const esquemaSocio = z.object({
   email: z.email("Escribe un correo válido.").trim().toLowerCase(),
   rut: rutValido,
   telefono: opcional(z.string().trim().max(30)),
-  fechaNacimiento: opcional(z.string().trim()),
+  // Las fechas iban sin validar y pasaban tal cual a Postgres: cualquier valor
+  // raro reventaba en el insert y salía como un "no se pudo crear el socio"
+  // sin decir qué campo estaba mal.
+  fechaNacimiento: opcional(fechaISO),
   // Una casilla no marcada no viaja en el formulario, de ahí el valor por
   // defecto: si el campo no llega, la cuenta no es de socio.
   esSocio: z.preprocess((v) => v === "on" || v === "true", z.boolean()),
@@ -43,7 +53,7 @@ const esquemaSocio = z.object({
   // era una copia y se quedó sin `secretario` al agregar las actas, así que el
   // formulario rechazaba ese rol como si faltara un campo.
   rol: z.enum(rolEnum.enumValues),
-  fechaIngreso: opcional(z.string().trim()),
+  fechaIngreso: opcional(fechaISO),
 });
 
 /** Traduce el error de índice único de Postgres a un mensaje por campo. */
@@ -72,6 +82,8 @@ export async function accionCrearSocio(
   const d = parseado.data;
   const passwordTemporal = generarPasswordTemporal();
 
+  let creadoId: number;
+
   try {
     const [creado] = await db
       .insert(usuarios)
@@ -91,26 +103,39 @@ export async function accionCrearSocio(
       })
       .returning({ id: usuarios.id });
 
-    await notificarA(creado.id, {
+    creadoId = creado.id;
+  } catch (error) {
+    // Sin esta línea el fallo era invisible: el catch devolvía "No se pudo crear
+    // el socio" y no quedaba rastro de la causa en ninguna parte.
+    console.error("accionCrearSocio: falló la creación", error);
+    return (
+      conflictoUnico(error, formData) ?? fallo("No se pudo crear el socio.", formData)
+    );
+  }
+
+  // La bienvenida va fuera del try anterior a propósito. Estaba dentro, y eso
+  // hacía que un fallo posterior al insert respondiera "no se pudo crear el
+  // socio" cuando el socio ya existía: quien lo intentaba de nuevo chocaba
+  // entonces con el correo duplicado, sin entender por qué.
+  try {
+    await notificarA(creadoId, {
       tipo: "sistema",
       titulo: "Bienvenido al club",
       mensaje: `${autor.nombres} te creó una cuenta en la intranet. Cambia tu contraseña temporal desde tu perfil.`,
       enlace: "/panel/perfil",
     });
-
-    revalidatePath("/panel/socios");
-
-    return {
-      ok: true,
-      mensaje: `${d.nombres} ${d.apellidos} quedó registrado.`,
-      // Se muestra una sola vez: no se guarda en claro en ninguna parte.
-      datos: { passwordTemporal, email: d.email },
-    };
   } catch (error) {
-    return (
-      conflictoUnico(error, formData) ?? fallo("No se pudo crear el socio.", formData)
-    );
+    console.error("accionCrearSocio: socio creado, pero falló su notificación", error);
   }
+
+  revalidatePath("/panel/socios");
+
+  return {
+    ok: true,
+    mensaje: `${d.nombres} ${d.apellidos} quedó registrado.`,
+    // Se muestra una sola vez: no se guarda en claro en ninguna parte.
+    datos: { passwordTemporal, email: d.email },
+  };
 }
 
 export async function accionActualizarSocio(

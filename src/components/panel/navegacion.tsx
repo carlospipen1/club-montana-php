@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Activity,
   Backpack,
@@ -167,36 +168,51 @@ export function MenuMovil({ rol, noLeidas }: { rol: Rol; noLeidas: number }) {
         <Menu className="size-5" aria-hidden />
       </button>
 
-      {abierto && (
-        <div className="fixed inset-0 z-50 flex">
-          <button
-            type="button"
-            aria-label="Cerrar menú"
-            onClick={() => setAbierto(false)}
-            className="absolute inset-0 bg-stone-900/40"
-          />
-          <div className="relative flex w-72 max-w-[80vw] flex-col bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-              <span className="font-semibold text-stone-900">Menú</span>
-              <button
-                type="button"
-                onClick={() => setAbierto(false)}
-                aria-label="Cerrar menú"
-                className="flex size-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100"
-              >
-                <X className="size-4" aria-hidden />
-              </button>
+      {/*
+        El cajón se monta en el <body> mediante un portal, y no aquí dentro.
+        Vivía dentro del encabezado del panel, que lleva `backdrop-blur`: un
+        `backdrop-filter` convierte a su elemento en bloque contenedor de los
+        descendientes `fixed`, así que el `inset-0` del cajón se resolvía contra
+        la barra de 56 px en vez de contra la pantalla. En el celular eso se veía
+        como una franja blanca cortada arriba, con el resto de la página sin
+        oscurecer. El portal lo saca de ese contexto y recupera la pantalla
+        completa.
+
+        Sólo se evalúa cuando está abierto, y en el servidor `abierto` siempre es
+        falso, así que `createPortal` nunca corre durante el renderizado inicial.
+      */}
+      {abierto &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex">
+            <button
+              type="button"
+              aria-label="Cerrar menú"
+              onClick={() => setAbierto(false)}
+              className="absolute inset-0 bg-stone-900/40"
+            />
+            <div className="relative flex w-72 max-w-[80vw] flex-col bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
+                <span className="font-semibold text-stone-900">Menú</span>
+                <button
+                  type="button"
+                  onClick={() => setAbierto(false)}
+                  aria-label="Cerrar menú"
+                  className="flex size-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto px-4 py-5">
+                <Enlaces
+                  rol={rol}
+                  noLeidas={noLeidas}
+                  onNavegar={() => setAbierto(false)}
+                />
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-5">
-              <Enlaces
-                rol={rol}
-                noLeidas={noLeidas}
-                onNavegar={() => setAbierto(false)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
