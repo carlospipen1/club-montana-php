@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { URL_SITIO } from "@/lib/sitio";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubmontanacollipulli.cl",
-  ),
+  metadataBase: new URL(URL_SITIO),
   title: {
     default: "Club de Montaña Collipulli",
     template: "%s · Club de Montaña Collipulli",

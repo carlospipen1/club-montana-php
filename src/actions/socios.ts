@@ -272,6 +272,9 @@ export async function accionResetearPassword(
     .set({
       passwordHash: await hashPassword(passwordTemporal),
       debeCambiarPassword: true,
+      // La directiva resetea justamente cuando alguien perdió el acceso o se
+      // fue: dejar viva la sesión anterior anularía el sentido del reseteo.
+      sesionesDesde: new Date(),
     })
     .where(eq(usuarios.id, id));
 

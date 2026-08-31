@@ -1,0 +1,1 @@
+ALTER TABLE "usuarios" ADD COLUMN "sesiones_desde" timestamp with time zone DEFAULT now() NOT NULL;

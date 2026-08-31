@@ -127,6 +127,23 @@ export const usuarios = pgTable(
     /** Fuerza el cambio de contraseña en el próximo ingreso. */
     debeCambiarPassword: boolean("debe_cambiar_password").notNull().default(false),
 
+    /**
+     * Desde cuándo valen las sesiones de esta persona.
+     *
+     * La cookie es un JWT de siete días que sólo lleva el id, así que cambiar la
+     * contraseña no bastaba para echar a nadie: quien tuviera una sesión abierta
+     * seguía dentro hasta que venciera sola. En un "olvidé mi contraseña" eso es
+     * justo lo contrario de lo que la persona espera.
+     *
+     * Adelantar esta fecha invalida de golpe todo lo emitido antes. Se compara
+     * en `usuarioActual()` contra la fecha de emisión del token. Lo mueve
+     * cualquier cambio de contraseña: el del enlace de recuperación, el del
+     * perfil y el que hace la directiva al resetear.
+     */
+    sesionesDesde: timestamp("sesiones_desde", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+
     creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
   },
   // Casi todas las consultas filtran por socios activos.
@@ -509,6 +526,39 @@ export const notificaciones = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/*  Recuperación de contraseña                                                 */
+/* -------------------------------------------------------------------------- */
+
+export const tokensRecuperacion = pgTable(
+  "tokens_recuperacion",
+  {
+    id: serial("id").primaryKey(),
+    usuarioId: integer("usuario_id")
+      .notNull()
+      .references(() => usuarios.id, { onDelete: "cascade" }),
+
+    /**
+     * Se guarda el SHA-256 del token, nunca el token mismo. Quien consiga leer
+     * esta tabla —un volcado filtrado, una consola abierta— no puede usar nada
+     * de lo que ve: el valor que viaja en el enlace no está aquí.
+     *
+     * SHA-256 y no bcrypt a propósito: el token son 32 bytes aleatorios, no una
+     * contraseña que alguien pueda adivinar, así que el costo artificial de
+     * bcrypt no compra nada y sí encarece cada validación.
+     */
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+
+    expiraEn: timestamp("expira_en", { withTimezone: true }).notNull(),
+    /** Nulo mientras el token sirve. Se sella al usarlo o al anularlo. */
+    usadoEn: timestamp("usado_en", { withTimezone: true }),
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  // Para contar las solicitudes recientes de un socio (el límite por hora) sin
+  // recorrer la tabla entera.
+  (t) => [index("tokens_recuperacion_usuario_idx").on(t.usuarioId, t.creadoEn)],
+);
+
+/* -------------------------------------------------------------------------- */
 /*  Relaciones                                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -517,6 +567,14 @@ export const usuariosRelations = relations(usuarios, ({ many }) => ({
   inscripciones: many(inscripciones),
   cuotas: many(cuotasMensuales),
   notificaciones: many(notificaciones),
+  tokensRecuperacion: many(tokensRecuperacion),
+}));
+
+export const tokensRecuperacionRelations = relations(tokensRecuperacion, ({ one }) => ({
+  usuario: one(usuarios, {
+    fields: [tokensRecuperacion.usuarioId],
+    references: [usuarios.id],
+  }),
 }));
 
 export const equiposRelations = relations(equipos, ({ many }) => ({
@@ -570,6 +628,7 @@ export type Inscripcion = typeof inscripciones.$inferSelect;
 export type CuotaAnual = typeof cuotasAnuales.$inferSelect;
 export type CuotaMensual = typeof cuotasMensuales.$inferSelect;
 export type Notificacion = typeof notificaciones.$inferSelect;
+export type TokenRecuperacion = typeof tokensRecuperacion.$inferSelect;
 
 export type Rol = (typeof rolEnum.enumValues)[number];
 export type TipoMiembro = (typeof tipoMiembroEnum.enumValues)[number];

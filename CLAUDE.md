@@ -49,6 +49,24 @@ cambio de configuración.
 **Los montos de cuota se copian, no se referencian.** Cada cuota mensual guarda el
 monto que correspondía ese año. Subir la cuota no reescribe el pasado.
 
+**Cambiar una contraseña tiene que mover `usuarios.sesionesDesde`.** La cookie es
+un JWT de siete días que sólo lleva el id, así que sin eso quien tuviera una
+sesión abierta sigue dentro con la contraseña vieja —y recuperar una cuenta
+robada no serviría de nada—. Hoy lo hacen los tres lugares que tocan
+`passwordHash`: el enlace de recuperación, el perfil y el reseteo de la
+directiva. Si aparece un cuarto, tiene que hacerlo también. Cuando quien cambia
+la contraseña es la propia persona, después hay que volver a llamar
+`iniciarSesion()` o se expulsa sola.
+
+**El token de sesión dice de qué despliegue viene.** `audienciaActual()` en
+`session.ts` devuelve `club` o `demo` según `MODO_DEMO`, y va como `aud` del JWT;
+`auth.ts` lo verifica. Sin eso, y si los dos proyectos compartieran
+`AUTH_SECRET`, cualquiera entraría a la demostración —donde la contraseña está
+impresa en pantalla— y su cookie serviría en el club. Consecuencia práctica:
+cambiar `MODO_DEMO` en un despliegue invalida todas sus sesiones, y un tercer
+despliegue necesita su propio valor de audiencia. El proxy no lo comprueba a
+propósito: corre en el edge, donde `MODO_DEMO` no está garantizado.
+
 **Las fotos se marcan, no se duplican.** Una foto pertenece a un álbum y tres
 banderas deciden dónde sale: portada del sitio (una en todo el sistema), en el
 carrusel (hasta 12) y portada del álbum.

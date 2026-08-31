@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { usuarios, type Usuario } from "@/db/schema";
-import { cookieSesion, firmarSesion, verificarSesion } from "./session";
+import { audienciaActual, cookieSesion, firmarSesion, verificarSesion } from "./session";
 import { puede, type Capacidad } from "./permisos";
 
 /**
@@ -20,6 +20,10 @@ export const usuarioActual = cache(async (): Promise<Usuario | null> => {
   const payload = await verificarSesion(store.get(cookieSesion.nombre)?.value);
   if (!payload) return null;
 
+  // Una cookie de la demostración no vale en el club, ni al revés, aunque los
+  // dos despliegues compartieran `AUTH_SECRET`. Ver `audienciaActual()`.
+  if (payload.audiencia !== audienciaActual()) return null;
+
   const [usuario] = await db
     .select()
     .from(usuarios)
@@ -28,6 +32,14 @@ export const usuarioActual = cache(async (): Promise<Usuario | null> => {
 
   // Un socio desactivado queda fuera de inmediato, sin esperar a que venza el token.
   if (!usuario || usuario.estado !== "activo") return null;
+
+  // Y una contraseña nueva echa a quien tuviera una sesión abierta con la
+  // anterior. Se comparan segundos porque `iat` viene redondeado hacia abajo, y
+  // el corte es estricto para que la sesión que se emite en el mismo segundo
+  // que el cambio —la de quien acaba de cambiar su propia contraseña— sobreviva.
+  const corte = Math.floor(usuario.sesionesDesde.getTime() / 1000);
+  if (payload.emitidoEn < corte) return null;
+
   return usuario;
 });
 

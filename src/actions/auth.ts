@@ -121,8 +121,18 @@ export async function accionCambiarPassword(
 
   await db
     .update(usuarios)
-    .set({ passwordHash: await hashPassword(nueva), debeCambiarPassword: false })
+    .set({
+      passwordHash: await hashPassword(nueva),
+      debeCambiarPassword: false,
+      // Cierra las sesiones abiertas con la contraseña anterior: la propia de
+      // otro navegador, y la de cualquiera que la tuviera.
+      sesionesDesde: new Date(),
+    })
     .where(eq(usuarios.id, usuario.id));
+
+  // La de acá también quedó invalidada, así que se emite una nueva: quien acaba
+  // de cambiar su contraseña a propósito no tiene por qué salir expulsado.
+  await iniciarSesion(usuario.id);
 
   return exito("Contraseña actualizada.");
 }

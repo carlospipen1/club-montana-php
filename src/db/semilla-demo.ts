@@ -48,6 +48,7 @@ export async function sembrarDemo(): Promise<void> {
 
   await db.execute(sql`
     truncate table
+      tokens_recuperacion,
       notificaciones, fotos, albumes, actas,
       cuotas_mensuales, cuotas_anuales,
       asistencias, reuniones,

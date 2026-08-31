@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Mountain } from "lucide-react";
 
 import { usuarioActual } from "@/lib/auth";
+import { correoHabilitado } from "@/lib/correo";
+import { Aviso } from "@/components/ui/avisos";
 import { CuentasDemo } from "@/components/cuentas-demo";
 import { FormularioLogin } from "./formulario";
 
@@ -16,7 +18,7 @@ export const metadata: Metadata = {
 export default async function PaginaLogin({ searchParams }: PageProps<"/login">) {
   if (await usuarioActual()) redirect("/panel");
 
-  const { siguiente } = await searchParams;
+  const { siguiente, restablecida } = await searchParams;
   const destino = typeof siguiente === "string" ? siguiente : undefined;
 
   return (
@@ -34,8 +36,17 @@ export default async function PaginaLogin({ searchParams }: PageProps<"/login">)
 
         <CuentasDemo />
 
+        {restablecida && (
+          <Aviso tono="exito" titulo="Contraseña guardada">
+            Ya puedes entrar con tu contraseña nueva.
+          </Aviso>
+        )}
+
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-xs">
-          <FormularioLogin siguiente={destino} />
+          <FormularioLogin
+            siguiente={destino}
+            recuperacionDisponible={correoHabilitado()}
+          />
         </div>
 
         <p className="text-center text-xs text-stone-500">

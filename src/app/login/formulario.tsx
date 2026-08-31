@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { LogIn } from "lucide-react";
 
 import { accionLogin } from "@/actions/auth";
@@ -9,7 +10,13 @@ import { BotonEnviar } from "@/components/ui/acciones";
 import { Aviso } from "@/components/ui/avisos";
 import { Campo, Input } from "@/components/ui/campos";
 
-export function FormularioLogin({ siguiente }: { siguiente?: string }) {
+export function FormularioLogin({
+  siguiente,
+  recuperacionDisponible,
+}: {
+  siguiente?: string;
+  recuperacionDisponible: boolean;
+}) {
   const [estado, accion] = useActionState(accionLogin, ESTADO_INICIAL);
 
   return (
@@ -55,6 +62,17 @@ export function FormularioLogin({ siguiente }: { siguiente?: string }) {
         <LogIn aria-hidden />
         Ingresar
       </BotonEnviar>
+
+      {recuperacionDisponible && (
+        <p className="text-center">
+          <Link
+            href="/recuperar"
+            className="text-sm text-stone-500 underline underline-offset-2 hover:text-stone-900"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
+      )}
     </form>
   );
 }

@@ -43,6 +43,20 @@
       "when": 1788041441490,
       "tag": "0005_strange_viper",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788182899156,
+      "tag": "0006_tan_molecule_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788183599543,
+      "tag": "0007_lyrical_reaper",
+      "breakpoints": true
     }
   ]
 }
