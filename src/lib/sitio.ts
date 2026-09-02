@@ -7,5 +7,5 @@
  * acá y en la variable de entorno, no en cinco archivos.
  */
 export const URL_SITIO = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubmontanacollipulli.cl"
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubdemontanacollipulli.cl"
 ).replace(/\/$/, "");

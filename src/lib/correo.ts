@@ -24,7 +24,7 @@ const API = "https://api.resend.com/emails";
 function remitente(): string {
   return (
     process.env.CORREO_REMITENTE ??
-    "Club de Montaña Collipulli <no-reply@clubmontanacollipulli.cl>"
+    "Club de Montaña Collipulli <no-reply@clubdemontanacollipulli.cl>"
   );
 }
 
