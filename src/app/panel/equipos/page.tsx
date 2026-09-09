@@ -8,7 +8,7 @@ import { requerirUsuario } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
 import { formatearFecha } from "@/lib/utils";
 import { ConfirmarEnvio } from "@/components/ui/acciones";
-import { Boton } from "@/components/ui/boton";
+import { Boton, BotonEnlace } from "@/components/ui/boton";
 import { Input } from "@/components/ui/campos";
 import {
   ESTADO_EQUIPO,
@@ -54,6 +54,12 @@ export default async function PaginaEquipos({
         titulo="Equipos del club"
         descripcion={`${disponibles} disponible(s) de ${lista.length} en inventario. Marca lo que necesites y pídelo todo junto.`}
       >
+        {/* Desde acá se pide, así que desde acá tiene que poder verse lo ya
+            pedido: es la primera pregunta después de mandar el primer pedido. */}
+        <BotonEnlace href="/panel/mi-actividad" variante="outline">
+          <Backpack aria-hidden />
+          Mis pedidos
+        </BotonEnlace>
         {puedeGestionar && <NuevoEquipo />}
       </CabeceraPagina>
 
@@ -93,14 +99,17 @@ export default async function PaginaEquipos({
           <Tabla>
             <TablaCabecera>
               <tr>
-                <Th className="w-10">
-                  <span className="sr-only">Agregar al pedido</span>
-                </Th>
+                {/* La columna lleva título: sin él, una casilla suelta no dice
+                    para qué sirve, y el botón de pedir ya no está en la fila. */}
+                <Th className="w-14">Pedir</Th>
                 <Th>Equipo</Th>
                 <Th>Categoría</Th>
                 <Th>Estado</Th>
                 <Th>Adquirido</Th>
-                <Th className="text-right">Acciones</Th>
+                {/* Editar y eliminar son de quien administra el inventario. A
+                    los demás la columna les salía vacía, prometiendo acciones
+                    que no existen. */}
+                {puedeGestionar && <Th className="text-right">Acciones</Th>}
               </tr>
             </TablaCabecera>
             <TablaCuerpo>
@@ -130,31 +139,29 @@ export default async function PaginaEquipos({
                   <Td className="whitespace-nowrap">
                     {formatearFecha(equipo.fechaAdquisicion)}
                   </Td>
-                  <Td>
-                    <div className="flex items-center justify-end gap-1">
-                      {puedeGestionar && (
-                        <>
-                          <EditarEquipo equipo={equipo} />
-                          <ConfirmarEnvio
-                            mensaje={`¿Eliminar "${equipo.nombre}" del inventario? También se borrará su historial de préstamos.`}
-                          >
-                            <form action={accionEliminarEquipo}>
-                              <input type="hidden" name="id" value={equipo.id} />
-                              <Boton
-                                type="submit"
-                                variante="ghost"
-                                tamano="sm"
-                                className="text-red-700 hover:bg-red-50"
-                                aria-label={`Eliminar ${equipo.nombre}`}
-                              >
-                                <Trash2 aria-hidden />
-                              </Boton>
-                            </form>
-                          </ConfirmarEnvio>
-                        </>
-                      )}
-                    </div>
-                  </Td>
+                  {puedeGestionar && (
+                    <Td>
+                      <div className="flex items-center justify-end gap-1">
+                        <EditarEquipo equipo={equipo} />
+                        <ConfirmarEnvio
+                          mensaje={`¿Eliminar "${equipo.nombre}" del inventario? También se borrará su historial de préstamos.`}
+                        >
+                          <form action={accionEliminarEquipo}>
+                            <input type="hidden" name="id" value={equipo.id} />
+                            <Boton
+                              type="submit"
+                              variante="ghost"
+                              tamano="sm"
+                              className="text-red-700 hover:bg-red-50"
+                              aria-label={`Eliminar ${equipo.nombre}`}
+                            >
+                              <Trash2 aria-hidden />
+                            </Boton>
+                          </form>
+                        </ConfirmarEnvio>
+                      </div>
+                    </Td>
+                  )}
                 </Fila>
               ))}
             </TablaCuerpo>
