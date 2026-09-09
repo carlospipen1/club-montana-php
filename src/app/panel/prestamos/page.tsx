@@ -1,7 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import {
   AlarmClock,
   Backpack,
+  CalendarDays,
   ChevronRight,
   ClipboardCheck,
   Users,
@@ -16,7 +17,7 @@ import {
   usuarios,
 } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
-import { diasDeAtraso, formatearFecha, formatearFechaHora } from "@/lib/utils";
+import { diasDeAtraso, formatearFecha, formatearFechaHora, hoyISO } from "@/lib/utils";
 import { ESTADO_PRESTAMO, Insignia, InsigniaEstado } from "@/components/ui/datos";
 import {
   CabeceraPagina,
@@ -89,6 +90,23 @@ export default async function PaginaPrestamos() {
       .orderBy(equipos.nombre),
   ]);
 
+  // Cuántas veces se pidió cada equipo. Nombres de tabla escritos completos:
+  // interpolando las columnas del esquema, Drizzle las emite sin calificar y
+  // `equipo_id = id` se resuelve dentro de la subconsulta contra sí misma.
+  const inventario = await db
+    .select({
+      id: equipos.id,
+      nombre: equipos.nombre,
+      categoria: equipos.categoria,
+      veces: sql<number>`(
+        select count(*)::int from prestamos
+        where prestamos.equipo_id = equipos.id
+          and prestamos.estado <> 'cancelado'
+      )`,
+    })
+    .from(equipos)
+    .orderBy(asc(equipos.categoria), asc(equipos.nombre));
+
   const porSolicitud = new Map<number, Item[]>();
   for (const item of items) {
     const grupo = porSolicitud.get(item.solicitudId);
@@ -152,6 +170,63 @@ export default async function PaginaPrestamos() {
       deudores.set(s.usuarioId, (deudores.get(s.usuarioId) ?? 0) + vencidos);
     }
   }
+
+  // La semana que viene: qué hay que entregar y qué hay que recibir.
+  //
+  // Es lo que el encargado necesita el viernes para preparar la bodega, y hasta
+  // ahora había que deducirlo leyendo fechas préstamo por préstamo.
+  const hoy = hoyISO();
+  const enUnaSemana = new Date(Date.parse(`${hoy}T00:00:00Z`) + 7 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+
+  const agenda = solicitudes
+    .flatMap((s) => {
+      const aprobados = s.items.filter((i) => i.estado === "aprobado").length;
+      const pendientes = s.items.filter((i) => i.estado === "pendiente").length;
+      const eventos: { fecha: string; tipo: "entrega" | "devolucion"; s: Solicitud; cuantos: number }[] =
+        [];
+
+      // Lo pendiente cuenta como entrega posible: si no se responde antes del
+      // viernes, ese equipo igual va a aparecer a buscarse.
+      if (aprobados + pendientes > 0 && s.fechaDesde >= hoy && s.fechaDesde <= enUnaSemana) {
+        eventos.push({
+          fecha: s.fechaDesde,
+          tipo: "entrega",
+          s,
+          cuantos: aprobados + pendientes,
+        });
+      }
+      if (aprobados > 0 && s.fechaHasta >= hoy && s.fechaHasta <= enUnaSemana) {
+        eventos.push({ fecha: s.fechaHasta, tipo: "devolucion", s, cuantos: aprobados });
+      }
+      return eventos;
+    })
+    .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+  // Uso del inventario, para decidir compras y no préstamos.
+  //
+  // Se agrupa por modelo quitando el "· 3 de 8" del nombre: al club le sirve
+  // saber que nadie pide los mosquetones, no que nadie pide el mosquetón número
+  // tres. Es una regla de presentación sobre cómo el club nombra sus unidades;
+  // un equipo bautizado de otra forma simplemente aparece solo, sin romper nada.
+  const modelo = (nombre: string) => nombre.replace(/\s*·\s*\d+\s+de\s+\d+\s*$/i, "");
+
+  const porModelo = new Map<string, { veces: number; unidades: number }>();
+  for (const e of inventario) {
+    const clave = modelo(e.nombre);
+    const actual = porModelo.get(clave) ?? { veces: 0, unidades: 0 };
+    actual.veces += e.veces;
+    actual.unidades += 1;
+    porModelo.set(clave, actual);
+  }
+
+  const modelos = [...porModelo.entries()].map(([nombre, d]) => ({ nombre, ...d }));
+  const masPedidos = modelos
+    .filter((m) => m.veces > 0)
+    .sort((a, b) => b.veces - a.veces)
+    .slice(0, 5);
+  const nuncaPedidos = modelos.filter((m) => m.veces === 0);
 
   for (const { item, solicitud } of pendientesConFecha) {
     const otros = pendientesConFecha.filter(
@@ -230,6 +305,47 @@ export default async function PaginaPrestamos() {
         </Aviso>
       )}
 
+      {agenda.length > 0 && (
+        <Tarjeta>
+          <TarjetaCabecera
+            titulo="Los próximos siete días"
+            descripcion="Lo que hay que entregar y lo que tiene que volver"
+          />
+          <ul className="divide-y divide-stone-100">
+            {agenda.map((e) => (
+              <li
+                key={`${e.s.id}-${e.tipo}`}
+                className="flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-sm"
+              >
+                <span className="flex items-center gap-2">
+                  <CalendarDays
+                    className={
+                      e.tipo === "entrega"
+                        ? "size-4 text-brand-600"
+                        : "size-4 text-stone-400"
+                    }
+                    aria-hidden
+                  />
+                  <span className="font-medium text-stone-900">
+                    {formatearFecha(e.fecha)}
+                  </span>
+                  <span className="text-stone-600">
+                    {e.tipo === "entrega" ? "entregar" : "recibir"}{" "}
+                    {e.cuantos === 1 ? "1 equipo" : `${e.cuantos} equipos`}
+                  </span>
+                </span>
+                <a
+                  href={`#solicitud-${e.s.id}`}
+                  className="text-xs text-stone-500 underline-offset-2 hover:underline"
+                >
+                  {e.s.socioNombres} {e.s.socioApellidos}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </Tarjeta>
+      )}
+
       <Tarjeta>
         <TarjetaCabecera
           titulo="Solicitudes pendientes"
@@ -295,6 +411,73 @@ export default async function PaginaPrestamos() {
           </div>
         </Tarjeta>
       )}
+
+      {/* Esto no ayuda a resolver un préstamo: ayuda a decidir qué comprar y
+          qué dejar de comprar. Por eso va al final, después de lo que hay que
+          atender hoy. */}
+      <Tarjeta>
+        <TarjetaCabecera
+          titulo="Uso del inventario"
+          descripcion="Para decidir qué conviene comprar y qué está de adorno"
+        />
+        <div className="grid gap-6 px-5 py-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-medium tracking-wide text-stone-500 uppercase">
+              Los más pedidos
+            </p>
+            {masPedidos.length === 0 ? (
+              <p className="mt-2 text-sm text-stone-500">
+                Todavía nadie ha pedido nada.
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1.5">
+                {masPedidos.map((m) => (
+                  <li key={m.nombre} className="flex justify-between gap-3 text-sm">
+                    <span className="min-w-0 truncate text-stone-700">
+                      {m.nombre}
+                      {m.unidades > 1 && (
+                        <span className="text-stone-400"> · {m.unidades} unidades</span>
+                      )}
+                    </span>
+                    <span className="tabular shrink-0 font-medium text-stone-900">
+                      {m.veces}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <p className="text-xs font-medium tracking-wide text-stone-500 uppercase">
+              Nunca los ha pedido nadie
+            </p>
+            {nuncaPedidos.length === 0 ? (
+              <p className="mt-2 text-sm text-stone-500">
+                Todo el inventario se ha usado alguna vez.
+              </p>
+            ) : (
+              <>
+                <ul className="mt-2 space-y-1.5">
+                  {nuncaPedidos.slice(0, 8).map((m) => (
+                    <li key={m.nombre} className="truncate text-sm text-stone-700">
+                      {m.nombre}
+                      {m.unidades > 1 && (
+                        <span className="text-stone-400"> · {m.unidades} unidades</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {nuncaPedidos.length > 8 && (
+                  <p className="mt-1.5 text-xs text-stone-500">
+                    y {nuncaPedidos.length - 8} más.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </Tarjeta>
     </>
   );
 }
