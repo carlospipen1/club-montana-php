@@ -47,3 +47,37 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Impresión de la nómina de una salida
+
+   La hoja que se deja en Carabineros no puede salir con la barra lateral del
+   panel, la cabecera ni los botones alrededor. Se esconde todo salvo `#nomina`.
+
+   Se usa `visibility` y no `display: none`: al quitar los elementos del flujo,
+   la tabla se rearma y las columnas cambian de ancho entre lo que se ve en
+   pantalla y lo que sale impreso. Y va colgado de `body:has(#nomina)` para que
+   ninguna otra pantalla del sistema herede esta regla al imprimirse.
+   -------------------------------------------------------------------------- */
+@media print {
+  body:has(#nomina) * {
+    visibility: hidden;
+  }
+
+  body:has(#nomina) #nomina,
+  body:has(#nomina) #nomina * {
+    visibility: visible;
+  }
+
+  body:has(#nomina) #nomina {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+  }
+
+  /* Que una fila no quede partida entre dos hojas. */
+  #nomina tr {
+    break-inside: avoid;
+  }
+}

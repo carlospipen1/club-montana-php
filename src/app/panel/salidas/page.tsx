@@ -1,5 +1,5 @@
 import { asc, desc, eq, sql } from "drizzle-orm";
-import { CalendarDays, MapPin, Mountain, Users } from "lucide-react";
+import { CalendarDays, FileText, MapPin, Mountain, Users } from "lucide-react";
 
 import {
   accionCambiarEstadoSalida,
@@ -12,7 +12,7 @@ import { requerirUsuario } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
 import { formatearFechaHora } from "@/lib/utils";
 import { ConfirmarEnvio } from "@/components/ui/acciones";
-import { Boton } from "@/components/ui/boton";
+import { Boton, BotonEnlace } from "@/components/ui/boton";
 import { Selector } from "@/components/ui/campos";
 import {
   DIFICULTAD,
@@ -207,6 +207,19 @@ export default async function PaginaSalidas() {
                   Cambiar
                 </Boton>
               </form>
+
+              {/* La hoja para Carabineros. Se abre aparte para no perder el
+                  listado, y se puede imprimir aunque falten datos: los que
+                  faltan salen como línea para completar a mano. */}
+              <BotonEnlace
+                href={`/panel/salidas/${salida.id}/nomina`}
+                target="_blank"
+                variante="outline"
+                tamano="sm"
+              >
+                <FileText aria-hidden />
+                Nómina para Carabineros
+              </BotonEnlace>
             </div>
 
             <details className="group">
