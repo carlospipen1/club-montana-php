@@ -17,6 +17,8 @@ export async function generateMetadata({ params }: PageProps<"/galeria/[id]">) {
     description:
       datos.album.descripcion ??
       `Fotografías de ${datos.album.titulo}, Club de Montaña Collipulli.`,
+    // Cada álbum tiene una sola dirección buena: la del dominio del club.
+    alternates: { canonical: `/galeria/${id}` },
     openGraph: {
       title: datos.album.titulo,
       images: datos.fotos[0] ? [datos.fotos[0].url] : undefined,

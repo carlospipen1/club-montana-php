@@ -12,6 +12,7 @@ import {
 
 import { Carrusel } from "@/components/landing/carrusel";
 import { CORREO_CLUB } from "@/components/landing/cabecera";
+import { DatosEstructurados } from "@/components/landing/datos-estructurados";
 import { estiloBoton } from "@/components/ui/boton";
 import {
   albumesPublicados,
@@ -138,6 +139,17 @@ const TESTIMONIOS = [
   },
 ];
 
+/**
+ * La dirección buena de esta página, para que el buscador no dude.
+ *
+ * El sitio responde en el dominio pelado, en `www` —que redirige— y en la
+ * dirección de Vercel. Sin esto, Google puede tomar cualquiera de ellas como la
+ * principal y repartir entre varias lo que debería sumar en una sola.
+ */
+export const metadata = {
+  alternates: { canonical: "/" },
+};
+
 export default async function PaginaInicio() {
   const [portada, fotos, albumes] = await Promise.all([
     fotoDePortada(),
@@ -147,6 +159,7 @@ export default async function PaginaInicio() {
 
   return (
     <main className="flex-1">
+      <DatosEstructurados />
       {/* -------------------------------- Hero ------------------------------- */}
 
       {/* La portada necesita altura propia. Si se la da sólo el texto, en un
