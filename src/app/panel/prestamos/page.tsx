@@ -1,5 +1,11 @@
 import { desc, eq } from "drizzle-orm";
-import { AlarmClock, Backpack, ChevronRight, ClipboardCheck } from "lucide-react";
+import {
+  AlarmClock,
+  Backpack,
+  ChevronRight,
+  ClipboardCheck,
+  Users,
+} from "lucide-react";
 
 import { db } from "@/db";
 import {
@@ -37,6 +43,7 @@ type Item = {
 
 type Solicitud = {
   id: number;
+  usuarioId: number;
   fechaSolicitud: Date;
   fechaDesde: string;
   fechaHasta: string;
@@ -55,6 +62,7 @@ export default async function PaginaPrestamos() {
     db
       .select({
         id: solicitudesPrestamo.id,
+        usuarioId: solicitudesPrestamo.usuarioId,
         fechaSolicitud: solicitudesPrestamo.fechaSolicitud,
         fechaDesde: solicitudesPrestamo.fechaDesde,
         fechaHasta: solicitudesPrestamo.fechaHasta,
@@ -122,11 +130,28 @@ export default async function PaginaPrestamos() {
   // carpa para el mismo fin de semana y eso no se ve, se aprueba el primero que
   // aparece y el segundo se vuelve imposible sin que nadie entienda por qué.
   const disputas = new Map<number, string[]>();
+  /** Equipos distintos en disputa: dos pedidos por la misma carpa son una. */
+  const equiposDisputados = new Set<number>();
   const pendientesConFecha = solicitudes.flatMap((s) =>
     s.items
       .filter((i) => i.estado === "pendiente")
       .map((i) => ({ item: i, solicitud: s })),
   );
+
+  // Quién está debiendo equipo.
+  //
+  // Es el otro dato que hace falta para decidir un préstamo: alguien que
+  // todavía no devuelve lo del mes pasado no es lo mismo que alguien al día.
+  // El sistema no decide por el encargado —puede haber mil razones—, pero se lo
+  // pone delante en vez de obligarlo a ir a buscarlo a otra pantalla.
+  const deudores = new Map<number, number>();
+  for (const s of solicitudes) {
+    if (diasDeAtraso(s.fechaHasta) === 0) continue;
+    const vencidos = s.items.filter((i) => i.estado === "aprobado").length;
+    if (vencidos > 0) {
+      deudores.set(s.usuarioId, (deudores.get(s.usuarioId) ?? 0) + vencidos);
+    }
+  }
 
   for (const { item, solicitud } of pendientesConFecha) {
     const otros = pendientesConFecha.filter(
@@ -137,6 +162,7 @@ export default async function PaginaPrestamos() {
         o.solicitud.fechaHasta >= solicitud.fechaDesde,
     );
     if (otros.length > 0) {
+      equiposDisputados.add(item.equipoId);
       disputas.set(
         item.id,
         otros.map(
@@ -179,7 +205,19 @@ export default async function PaginaPrestamos() {
           detalle="Fuera del inventario"
           icono={<Backpack aria-hidden />}
         />
-        <Metrica etiqueta="Historial" valor={cerradas.length} detalle="Ya cerradas" />
+        {/* Reemplaza al contador de historial, que no ayudaba a decidir nada.
+            Esto sí: dice cuántos equipos tienen a más de una persona esperando. */}
+        <Metrica
+          etiqueta="Equipos disputados"
+          valor={equiposDisputados.size}
+          detalle={
+            equiposDisputados.size > 0
+              ? "Los pidió más de un socio"
+              : "Nadie pide lo mismo"
+          }
+          icono={<Users aria-hidden />}
+          tono={equiposDisputados.size > 0 ? "atencion" : "neutro"}
+        />
       </div>
 
       {atrasadas.length > 0 && (
@@ -206,7 +244,7 @@ export default async function PaginaPrestamos() {
         ) : (
           <div className="divide-y divide-stone-200">
             {porRevisar.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="revisar" disputas={disputas} />
+              <FichaSolicitud key={s.id} solicitud={s} modo="revisar" disputas={disputas} deudores={deudores} />
             ))}
           </div>
         )}
@@ -227,7 +265,7 @@ export default async function PaginaPrestamos() {
           />
           <div className="divide-y divide-stone-200">
             {atrasadas.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} />
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} deudores={deudores} />
             ))}
           </div>
         </Tarjeta>
@@ -241,7 +279,7 @@ export default async function PaginaPrestamos() {
           />
           <div className="divide-y divide-stone-200">
             {alDia.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} />
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} deudores={deudores} />
             ))}
           </div>
         </Tarjeta>
@@ -252,7 +290,7 @@ export default async function PaginaPrestamos() {
           <TarjetaCabecera titulo="Historial" descripcion="Solicitudes ya cerradas" />
           <div className="divide-y divide-stone-200">
             {cerradas.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="cerrada" disputas={disputas} />
+              <FichaSolicitud key={s.id} solicitud={s} modo="cerrada" disputas={disputas} deudores={deudores} />
             ))}
           </div>
         </Tarjeta>
@@ -273,11 +311,14 @@ function FichaSolicitud({
   solicitud: s,
   modo,
   disputas,
+  deudores,
 }: {
   solicitud: Solicitud;
   modo: "revisar" | "devolver" | "cerrada";
   /** Por id de préstamo, quién más pidió ese equipo para fechas que se cruzan. */
   disputas: Map<number, string[]>;
+  /** Por socio, cuántos equipos tiene con la devolución vencida. */
+  deudores: Map<number, number>;
 }) {
   const socio = `${s.socioNombres} ${s.socioApellidos}`;
   const atraso = diasDeAtraso(s.fechaHasta);
@@ -285,6 +326,7 @@ function FichaSolicitud({
   const aprobados = s.items.filter((i) => i.estado === "aprobado").length;
   const cuantos = s.items.length;
   const enDisputa = s.items.filter((i) => disputas.has(i.id)).length;
+  const debe = deudores.get(s.usuarioId) ?? 0;
 
   return (
     // Colapsada de entrada. Un pedido de veinte cosas ocupa una pantalla
@@ -333,6 +375,16 @@ function FichaSolicitud({
             <Insignia tono="alerta">
               <AlarmClock className="size-3" aria-hidden />
               {atraso === 1 ? "1 día de atraso" : `${atraso} días de atraso`}
+            </Insignia>
+          )}
+
+          {/* Que quien pide tenga equipo sin devolver no lo descalifica, pero
+              es lo primero que uno querría saber antes de prestarle más. */}
+          {modo === "revisar" && debe > 0 && (
+            <Insignia tono="alerta">
+              {debe === 1
+                ? "Tiene 1 equipo sin devolver"
+                : `Tiene ${debe} equipos sin devolver`}
             </Insignia>
           )}
 
