@@ -1,5 +1,12 @@
 import { desc, eq } from "drizzle-orm";
-import { Activity, AlarmClock, Backpack, Mountain, Wallet } from "lucide-react";
+import {
+  Activity,
+  AlarmClock,
+  Backpack,
+  ChevronRight,
+  Mountain,
+  Wallet,
+} from "lucide-react";
 
 import { db } from "@/db";
 import {
@@ -39,6 +46,7 @@ import {
   TarjetaCabecera,
   Vacio,
 } from "@/components/ui/superficie";
+import { SinPropagar } from "@/components/ui/acciones";
 import { CancelarSolicitud } from "./cancelar";
 
 export const metadata = { title: "Mi actividad" };
@@ -230,31 +238,46 @@ export default async function PaginaMiActividad() {
               const enSuPoder = pedido.items.some((i) => i.estado === "aprobado");
 
               return (
-                <section key={pedido.id} className="px-5 py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-stone-700">
-                        {formatearFecha(pedido.fechaDesde)}
-                        <span className="text-stone-400"> → </span>
-                        <span
-                          className={
-                            atraso > 0 && enSuPoder
-                              ? "font-medium text-red-700"
-                              : undefined
-                          }
-                        >
-                          {formatearFecha(pedido.fechaHasta)}
-                        </span>
-                      </p>
-                      <p className="text-xs text-stone-500">
-                        {pedido.items.length === 1
-                          ? "1 equipo"
-                          : `${pedido.items.length} equipos`}
-                        , pedidos el {formatearFecha(pedido.fechaSolicitud)}
-                      </p>
-                      <p className="mt-1 max-w-prose text-sm text-stone-600 italic">
-                        “{pedido.motivo}”
-                      </p>
+                // Colapsada, como en la pantalla de quien resuelve: un pedido
+                // de veinte cosas tapaba todo lo demás, y el historial de un
+                // socio activo son varios pedidos.
+                <details
+                  key={pedido.id}
+                  className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden"
+                >
+                  <summary className="flex cursor-pointer flex-wrap items-start justify-between gap-3 list-none">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <ChevronRight
+                        className="mt-1 size-4 shrink-0 text-stone-400 transition-transform group-open:rotate-90"
+                        aria-hidden
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm text-stone-700">
+                          {formatearFecha(pedido.fechaDesde)}
+                          <span className="text-stone-400"> → </span>
+                          <span
+                            className={
+                              atraso > 0 && enSuPoder
+                                ? "font-medium text-red-700"
+                                : undefined
+                            }
+                          >
+                            {formatearFecha(pedido.fechaHasta)}
+                          </span>
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          {pedido.items.length === 1
+                            ? "1 equipo"
+                            : `${pedido.items.length} equipos`}
+                          {pendientes > 0 &&
+                            pendientes !== pedido.items.length &&
+                            ` · ${pendientes} sin responder`}
+                          , pedidos el {formatearFecha(pedido.fechaSolicitud)}
+                        </p>
+                        <p className="mt-1 max-w-prose text-sm text-stone-600 italic">
+                          “{pedido.motivo}”
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
@@ -268,13 +291,15 @@ export default async function PaginaMiActividad() {
                           y puede retirarlo. Después ya no: lo aprobado se
                           devuelve, no se cancela. */}
                       {pendientes > 0 && (
-                        <CancelarSolicitud
-                          solicitudId={pedido.id}
-                          pendientes={pendientes}
-                        />
+                        <SinPropagar>
+                          <CancelarSolicitud
+                            solicitudId={pedido.id}
+                            pendientes={pendientes}
+                          />
+                        </SinPropagar>
                       )}
                     </div>
-                  </div>
+                  </summary>
 
                   <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200">
                     {pedido.items.map((item) => (
@@ -301,7 +326,7 @@ export default async function PaginaMiActividad() {
                       </li>
                     ))}
                   </ul>
-                </section>
+                </details>
               );
             })}
           </div>

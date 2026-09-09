@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { AlarmClock, Backpack, ClipboardCheck } from "lucide-react";
+import { AlarmClock, Backpack, ChevronRight, ClipboardCheck } from "lucide-react";
 
 import { db } from "@/db";
 import {
@@ -20,6 +20,7 @@ import {
   Vacio,
 } from "@/components/ui/superficie";
 import { Aviso } from "@/components/ui/avisos";
+import { SinPropagar } from "@/components/ui/acciones";
 import { ResolverPrestamo, ResolverSolicitud } from "./resolver";
 
 export const metadata = { title: "Préstamos" };
@@ -27,6 +28,7 @@ export const metadata = { title: "Préstamos" };
 type Item = {
   id: number;
   solicitudId: number;
+  equipoId: number;
   estado: (typeof estadoPrestamoEnum.enumValues)[number];
   notaResolucion: string | null;
   fechaDevolucion: Date | null;
@@ -68,6 +70,7 @@ export default async function PaginaPrestamos() {
       .select({
         id: prestamos.id,
         solicitudId: prestamos.solicitudId,
+        equipoId: prestamos.equipoId,
         estado: prestamos.estado,
         notaResolucion: prestamos.notaResolucion,
         fechaDevolucion: prestamos.fechaDevolucion,
@@ -111,6 +114,38 @@ export default async function PaginaPrestamos() {
   const alDia = enCurso.filter((s) => diasDeAtraso(s.fechaHasta) === 0);
 
   const equiposEnLaCalle = items.filter((i) => i.estado === "aprobado").length;
+
+  // Quién más está pidiendo lo mismo.
+  //
+  // Pedir ya no bloquea a nadie —a quién se le presta lo decide quien lleva los
+  // equipos—, pero entonces hay que mostrarlo: si dos socios quieren la misma
+  // carpa para el mismo fin de semana y eso no se ve, se aprueba el primero que
+  // aparece y el segundo se vuelve imposible sin que nadie entienda por qué.
+  const disputas = new Map<number, string[]>();
+  const pendientesConFecha = solicitudes.flatMap((s) =>
+    s.items
+      .filter((i) => i.estado === "pendiente")
+      .map((i) => ({ item: i, solicitud: s })),
+  );
+
+  for (const { item, solicitud } of pendientesConFecha) {
+    const otros = pendientesConFecha.filter(
+      (o) =>
+        o.item.equipoId === item.equipoId &&
+        o.solicitud.id !== solicitud.id &&
+        o.solicitud.fechaDesde <= solicitud.fechaHasta &&
+        o.solicitud.fechaHasta >= solicitud.fechaDesde,
+    );
+    if (otros.length > 0) {
+      disputas.set(
+        item.id,
+        otros.map(
+          (o) =>
+            `${o.solicitud.socioNombres} ${o.solicitud.socioApellidos} (${formatearFecha(o.solicitud.fechaDesde)} → ${formatearFecha(o.solicitud.fechaHasta)})`,
+        ),
+      );
+    }
+  }
 
   return (
     <>
@@ -171,7 +206,7 @@ export default async function PaginaPrestamos() {
         ) : (
           <div className="divide-y divide-stone-200">
             {porRevisar.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="revisar" />
+              <FichaSolicitud key={s.id} solicitud={s} modo="revisar" disputas={disputas} />
             ))}
           </div>
         )}
@@ -192,7 +227,7 @@ export default async function PaginaPrestamos() {
           />
           <div className="divide-y divide-stone-200">
             {atrasadas.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" />
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} />
             ))}
           </div>
         </Tarjeta>
@@ -206,7 +241,7 @@ export default async function PaginaPrestamos() {
           />
           <div className="divide-y divide-stone-200">
             {alDia.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" />
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" disputas={disputas} />
             ))}
           </div>
         </Tarjeta>
@@ -217,7 +252,7 @@ export default async function PaginaPrestamos() {
           <TarjetaCabecera titulo="Historial" descripcion="Solicitudes ya cerradas" />
           <div className="divide-y divide-stone-200">
             {cerradas.map((s) => (
-              <FichaSolicitud key={s.id} solicitud={s} modo="cerrada" />
+              <FichaSolicitud key={s.id} solicitud={s} modo="cerrada" disputas={disputas} />
             ))}
           </div>
         </Tarjeta>
@@ -237,36 +272,60 @@ export default async function PaginaPrestamos() {
 function FichaSolicitud({
   solicitud: s,
   modo,
+  disputas,
 }: {
   solicitud: Solicitud;
   modo: "revisar" | "devolver" | "cerrada";
+  /** Por id de préstamo, quién más pidió ese equipo para fechas que se cruzan. */
+  disputas: Map<number, string[]>;
 }) {
   const socio = `${s.socioNombres} ${s.socioApellidos}`;
   const atraso = diasDeAtraso(s.fechaHasta);
   const pendientes = s.items.filter((i) => i.estado === "pendiente").length;
   const aprobados = s.items.filter((i) => i.estado === "aprobado").length;
+  const cuantos = s.items.length;
+  const enDisputa = s.items.filter((i) => disputas.has(i.id)).length;
 
   return (
-    <section id={`solicitud-${s.id}`} className="px-5 py-4 scroll-mt-20">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium text-stone-900">{socio}</p>
-          <p className="text-xs text-stone-500">
-            Pidió {s.items.length === 1 ? "1 equipo" : `${s.items.length} equipos`} el{" "}
-            {formatearFechaHora(s.fechaSolicitud)}
-          </p>
-          <p className="mt-2 text-sm text-stone-700">
-            {formatearFecha(s.fechaDesde)}
-            <span className="text-stone-400"> → </span>
-            <span
-              className={
-                atraso > 0 && aprobados > 0 ? "font-medium text-red-700" : undefined
-              }
-            >
-              {formatearFecha(s.fechaHasta)}
-            </span>
-          </p>
-          <p className="mt-1 max-w-prose text-sm text-stone-600 italic">“{s.motivo}”</p>
+    // Colapsada de entrada. Un pedido de veinte cosas ocupa una pantalla
+    // completa, y con unas cuantas solicitudes acumuladas la página deja de
+    // servir para lo que sirve: mirar la lista y elegir cuál atender. Por eso
+    // el resumen carga lo necesario para decidir —quién, cuándo, para qué y
+    // cuánto— y los botones del pedido completo, que resuelven el caso normal
+    // sin desplegar nada. Se despliega para tratar los equipos uno por uno.
+    <details
+      id={`solicitud-${s.id}`}
+      className="group scroll-mt-20 px-5 py-4 [&_summary::-webkit-details-marker]:hidden"
+    >
+      <summary className="flex cursor-pointer flex-wrap items-start justify-between gap-3 list-none">
+        <div className="flex min-w-0 items-start gap-2">
+          <ChevronRight
+            className="mt-0.5 size-4 shrink-0 text-stone-400 transition-transform group-open:rotate-90"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <p className="font-medium text-stone-900">{socio}</p>
+            <p className="text-xs text-stone-500">
+              {cuantos === 1 ? "1 equipo" : `${cuantos} equipos`}
+              {pendientes > 0 && cuantos !== pendientes && ` · ${pendientes} sin responder`}
+              {" · pedidos el "}
+              {formatearFechaHora(s.fechaSolicitud)}
+            </p>
+            <p className="mt-2 text-sm text-stone-700">
+              {formatearFecha(s.fechaDesde)}
+              <span className="text-stone-400"> → </span>
+              <span
+                className={
+                  atraso > 0 && aprobados > 0 ? "font-medium text-red-700" : undefined
+                }
+              >
+                {formatearFecha(s.fechaHasta)}
+              </span>
+            </p>
+            <p className="mt-1 max-w-prose text-sm text-stone-600 italic">
+              “{s.motivo}”
+            </p>
+          </div>
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -277,30 +336,61 @@ function FichaSolicitud({
             </Insignia>
           )}
 
-          {modo === "revisar" && pendientes > 1 && (
-            <div className="flex items-center gap-1.5">
+          {/* Con la ficha cerrada, esto es lo único que avisa que hay alguien
+              más esperando lo mismo. Sin la marca habría que abrirlas todas
+              para enterarse. */}
+          {enDisputa > 0 && (
+            <Insignia tono="atencion">
+              {enDisputa === 1
+                ? "1 equipo lo pidió alguien más"
+                : `${enDisputa} equipos los pidió alguien más`}
+            </Insignia>
+          )}
+
+          {/* Los botones del pedido completo salen aunque quede una sola cosa:
+              si sólo aparecieran con dos o más, un pedido de un equipo obligaría
+              a desplegar la ficha para poder responderlo. */}
+          {modo === "revisar" && pendientes > 0 && (
+            <SinPropagar>
               <ResolverSolicitud
                 solicitudId={s.id}
                 decision="aprobado"
-                resumen={`Se aprueban los ${pendientes} equipos pendientes del pedido de ${socio}.`}
+                cuantos={pendientes}
+                resumen={
+                  pendientes === 1
+                    ? `Se aprueba el equipo pendiente del pedido de ${socio}.`
+                    : `Se aprueban los ${pendientes} equipos pendientes del pedido de ${socio}.`
+                }
               />
               <ResolverSolicitud
                 solicitudId={s.id}
                 decision="rechazado"
-                resumen={`Se rechazan los ${pendientes} equipos pendientes del pedido de ${socio}.`}
+                cuantos={pendientes}
+                resumen={
+                  pendientes === 1
+                    ? `Se rechaza el equipo pendiente del pedido de ${socio}.`
+                    : `Se rechazan los ${pendientes} equipos pendientes del pedido de ${socio}.`
+                }
               />
-            </div>
+            </SinPropagar>
           )}
 
-          {modo === "devolver" && aprobados > 1 && (
-            <ResolverSolicitud
-              solicitudId={s.id}
-              decision="devuelto"
-              resumen={`Vuelven al inventario los ${aprobados} equipos que ${socio} tiene en su poder.`}
-            />
+          {modo === "devolver" && aprobados > 0 && (
+            <SinPropagar>
+              <ResolverSolicitud
+                solicitudId={s.id}
+                decision="devuelto"
+                cuantos={aprobados}
+                resumen={
+                  aprobados === 1
+                    ? `Vuelve al inventario el equipo que ${socio} tiene en su poder.`
+                    : `Vuelven al inventario los ${aprobados} equipos que ${socio} tiene en su poder.`
+                }
+              />
+            </SinPropagar>
           )}
         </div>
-      </div>
+      </summary>
 
       <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200">
         {s.items.map((item) => (
@@ -310,6 +400,11 @@ function FichaSolicitud({
           >
             <div className="min-w-0">
               <p className="truncate text-sm text-stone-800">{item.equipoNombre}</p>
+              {disputas.get(item.id)?.map((otro) => (
+                <p key={otro} className="text-xs text-amber-800">
+                  También lo pidió {otro}
+                </p>
+              ))}
               {item.notaResolucion && (
                 <p className="truncate text-xs text-stone-500 italic">
                   Nota: {item.notaResolucion}
@@ -351,6 +446,6 @@ function FichaSolicitud({
           </li>
         ))}
       </ul>
-    </section>
+    </details>
   );
 }

@@ -152,15 +152,21 @@ export function ResolverSolicitud({
   solicitudId,
   decision,
   resumen,
+  cuantos,
 }: {
   solicitudId: number;
   decision: Decision;
   resumen: string;
+  /** Cuántos equipos alcanza la decisión, para que el botón no mienta. */
+  cuantos: number;
 }) {
   const { abierto, abrir, cerrar, estado, accion } =
     useModalAccion(accionResolverSolicitud);
 
   const t = TEXTOS_TODO[decision];
+  // "Aprobar todo" sobre una sola cosa suena raro y además preocupa: parece que
+  // va a tocar más de lo que toca.
+  const etiqueta = cuantos === 1 ? TEXTOS[decision].etiqueta : `${t.etiqueta} (${cuantos})`;
   const Icono =
     decision === "aprobado" ? Check : decision === "rechazado" ? X : PackageCheck;
 
@@ -178,7 +184,7 @@ export function ResolverSolicitud({
         onClick={abrir}
       >
         <Icono aria-hidden />
-        {t.etiqueta}
+        {etiqueta}
       </Boton>
 
       <Modal

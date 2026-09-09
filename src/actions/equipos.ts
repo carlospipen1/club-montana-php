@@ -189,8 +189,16 @@ export async function accionSolicitarPrestamo(
 
       // Dos rangos chocan si cada uno empieza antes de que el otro termine.
       // Las fechas viven en la solicitud, así que hay que cruzar las tablas.
-      const comprometidos = await tx
-        .select({ nombre: equipos.nombre })
+      //
+      // Sólo frena lo **aprobado**: ahí el equipo está de verdad en manos de
+      // alguien. Que otro socio lo haya pedido y nadie le haya respondido no
+      // reserva nada —a quién se le presta lo decide quien lleva los equipos,
+      // no el orden en que llegaron los pedidos—. Antes también frenaba lo
+      // pendiente, así que el segundo en pedir se topaba con una pared que
+      // nadie había levantado, y el encargado ni se enteraba de que dos
+      // personas lo querían.
+      const prestados = await tx
+        .select({ nombre: equipos.nombre, hasta: solicitudesPrestamo.fechaHasta })
         .from(prestamos)
         .innerJoin(
           solicitudesPrestamo,
@@ -200,18 +208,22 @@ export async function accionSolicitarPrestamo(
         .where(
           and(
             inArray(prestamos.equipoId, equipoIds),
-            inArray(prestamos.estado, ["pendiente", "aprobado"]),
+            eq(prestamos.estado, "aprobado"),
             lte(solicitudesPrestamo.fechaDesde, fechaHasta),
             gte(solicitudesPrestamo.fechaHasta, fechaDesde),
           ),
         );
 
-      if (comprometidos.length > 0) {
-        const nombres = [...new Set(comprometidos.map((c) => c.nombre))];
+      if (prestados.length > 0) {
+        const nombres = [...new Set(prestados.map((c) => c.nombre))];
+        const devolucion = prestados
+          .map((c) => c.hasta)
+          .sort()
+          .at(-1);
         choque =
           nombres.length === 1
-            ? `${nombres[0]} ya está comprometido en esas fechas. Sácalo del pedido o prueba con otro rango.`
-            : `${listar(nombres)} ya están comprometidos en esas fechas. Sácalos del pedido o prueba con otro rango.`;
+            ? `${nombres[0]} está prestado hasta el ${devolucion}. Sácalo del pedido o prueba con otro rango.`
+            : `${listar(nombres)} están prestados en esas fechas. Sácalos del pedido o prueba con otro rango.`;
         // Nada escrito todavía: se sale sin dejar rastro.
         tx.rollback();
       }
@@ -368,22 +380,71 @@ async function aplicarDecision(
       equipoId: prestamos.equipoId,
       equipoNombre: equipos.nombre,
       usuarioId: solicitudesPrestamo.usuarioId,
+      fechaDesde: solicitudesPrestamo.fechaDesde,
+      fechaHasta: solicitudesPrestamo.fechaHasta,
     })
     .from(prestamos)
     .innerJoin(equipos, eq(prestamos.equipoId, equipos.id))
     .innerJoin(solicitudesPrestamo, eq(prestamos.solicitudId, solicitudesPrestamo.id))
     .where(inArray(prestamos.id, prestamoIds));
 
-  const aplicables = items.filter((i) => i.estado === ORIGEN[decision]);
-  if (aplicables.length === 0) return null;
+  const candidatos = items.filter((i) => i.estado === ORIGEN[decision]);
+  if (candidatos.length === 0) return null;
 
-  const ids = aplicables.map((i) => i.id);
-  const equipoIds = aplicables.map((i) => i.equipoId);
   const ahora = new Date();
+  let aplicables = candidatos;
+  const bloqueados: string[] = [];
 
   // El préstamo y el estado del equipo cambian juntos o no cambian: si algo
   // falla a medio camino, no queda un equipo "prestado" sin préstamo asociado.
   await db.transaction(async (tx) => {
+    if (decision === "aprobado") {
+      // Al pedir ya no frena que otro socio haya pedido lo mismo: eso lo decide
+      // quien resuelve. Pero entonces la comprobación tiene que existir acá, o
+      // aprobar los dos pedidos comprometería la misma carpa dos veces.
+      await tx
+        .select({ id: equipos.id })
+        .from(equipos)
+        .where(inArray(equipos.id, candidatos.map((i) => i.equipoId)))
+        .for("update");
+
+      const yaPrestados = await tx
+        .select({
+          equipoId: prestamos.equipoId,
+          desde: solicitudesPrestamo.fechaDesde,
+          hasta: solicitudesPrestamo.fechaHasta,
+        })
+        .from(prestamos)
+        .innerJoin(
+          solicitudesPrestamo,
+          eq(prestamos.solicitudId, solicitudesPrestamo.id),
+        )
+        .where(
+          and(
+            inArray(prestamos.equipoId, candidatos.map((i) => i.equipoId)),
+            eq(prestamos.estado, "aprobado"),
+          ),
+        );
+
+      const libres = [];
+      for (const item of candidatos) {
+        const choca = yaPrestados.some(
+          (p) =>
+            p.equipoId === item.equipoId &&
+            p.desde <= item.fechaHasta &&
+            p.hasta >= item.fechaDesde,
+        );
+        if (choca) bloqueados.push(item.equipoNombre);
+        else libres.push(item);
+      }
+      aplicables = libres;
+
+      if (aplicables.length === 0) return;
+    }
+
+    const ids = aplicables.map((i) => i.id);
+    const equipoIds = aplicables.map((i) => i.equipoId);
+
     await tx
       .update(prestamos)
       .set(
@@ -414,8 +475,11 @@ async function aplicarDecision(
   });
 
   return {
-    usuarioId: aplicables[0].usuarioId,
+    usuarioId: candidatos[0].usuarioId,
+    /** Lo que efectivamente cambió de estado. */
     nombres: aplicables.map((i) => i.equipoNombre),
+    /** Lo que no se pudo aprobar porque ya está prestado en esas fechas. */
+    bloqueados,
   };
 }
 
@@ -486,6 +550,14 @@ export async function accionResolverPrestamo(
     );
   }
 
+  // Se lo llevó otro pedido mientras esta pantalla estaba abierta.
+  if (resultado.nombres.length === 0) {
+    return fallo(
+      `${resultado.bloqueados[0]} ya está aprobado para otro socio en fechas que se cruzan. Si querías dárselo a este, primero hay que registrar la devolución del otro préstamo.`,
+      formData,
+    );
+  }
+
   await avisarAlSocio(resultado.usuarioId, decision, resultado.nombres, nota || null);
   revalidarPrestamos();
 
@@ -541,13 +613,29 @@ export async function accionResolverSolicitud(
 
   if (!resultado) return fallo("No queda nada por resolver en esa solicitud.", formData);
 
-  await avisarAlSocio(resultado.usuarioId, decision, resultado.nombres, nota || null);
+  const { nombres, bloqueados } = resultado;
+
+  if (nombres.length === 0) {
+    return fallo(
+      `No se aprobó nada: ${listar(bloqueados)} ya ${bloqueados.length === 1 ? "está aprobado" : "están aprobados"} para otro socio en fechas que se cruzan.`,
+      formData,
+    );
+  }
+
+  await avisarAlSocio(resultado.usuarioId, decision, nombres, nota || null);
   revalidarPrestamos();
 
-  const cuantos = resultado.nombres.length;
+  const cuantos = nombres.length;
+  // Aprobar el pedido completo puede dejar cosas afuera, y hay que decirlo: si
+  // no, quien resuelve se va creyendo que entregó cinco cosas y entregó cuatro.
+  const pendiente =
+    bloqueados.length > 0
+      ? ` ${listar(bloqueados)} no, porque ya ${bloqueados.length === 1 ? "está prestado" : "están prestados"} en esas fechas.`
+      : "";
+
   return exito(
     decision === "aprobado"
-      ? `${cuantos === 1 ? "1 equipo aprobado" : `${cuantos} equipos aprobados`}.`
+      ? `${cuantos === 1 ? "1 equipo aprobado" : `${cuantos} equipos aprobados`}.${pendiente}`
       : decision === "rechazado"
         ? `${cuantos === 1 ? "1 equipo rechazado" : `${cuantos} equipos rechazados`}.`
         : `${cuantos === 1 ? "1 devolución registrada" : `${cuantos} devoluciones registradas`}.`,

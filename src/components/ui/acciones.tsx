@@ -161,3 +161,26 @@ export function ConfirmarEnvio({
     </span>
   );
 }
+
+/**
+ * Envuelve controles que viven dentro de un `<summary>`.
+ *
+ * Un clic en cualquier parte del resumen abre y cierra el `<details>`. Para los
+ * botones que van ahí —aprobar el pedido completo, cancelarlo— eso significaría
+ * que apretar el botón además despliega la ficha, que es movimiento que nadie
+ * pidió. Acá se corta la propagación y el resumen sigue siendo clicable en todo
+ * lo demás.
+ */
+export function SinPropagar({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="flex items-center gap-1.5"
+      onClick={(e) => e.stopPropagation()}
+      // El teclado abre el `<details>` con Enter sobre el resumen; sin esto,
+      // activar un botón con Enter haría las dos cosas.
+      onKeyDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </span>
+  );
+}

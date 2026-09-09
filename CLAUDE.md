@@ -77,10 +77,20 @@ aprueba el resto en vez de rechazar todo y pedir que se mande de nuevo. Los
 botones de "aprobar todo" mandan los mismos ids a la misma función; no son otro
 camino.
 
+**Una solicitud pendiente no reserva nada.** Pedir sólo se frena contra lo ya
+**aprobado**, que es equipo físicamente en manos de alguien. Que otro socio haya
+pedido lo mismo no bloquea: a quién se le presta lo decide quien lleva los
+equipos, no el orden en que llegaron los pedidos. Eso tiene dos consecuencias
+que van juntas y no se pueden separar: la comprobación de choque **también
+ocurre al aprobar** —ahí sí, o el mismo saco se compromete dos veces—, y la
+pantalla de préstamos marca los equipos que pidió más de una persona, porque si
+no quien resuelve aprueba el primero que ve y el segundo se vuelve imposible sin
+que nadie entienda por qué.
+
 **El choque de fechas se comprueba con las filas de `equipos` bloqueadas.**
-`accionSolicitarPrestamo` hace `select ... for update` sobre los equipos del
-pedido *antes* de buscar choques. Sin eso, dos socios pidiendo el mismo saco a
-la vez pasaban los dos: cada uno leía antes de que el otro escribiera.
+Al pedir y al aprobar se hace `select ... for update` sobre los equipos
+involucrados *antes* de buscar choques. Sin eso, dos operaciones simultáneas
+pasaban las dos: cada una leía antes de que la otra escribiera.
 
 **Las fotos se marcan, no se duplican.** Una foto pertenece a un álbum y tres
 banderas deciden dónde sale: portada del sitio (una en todo el sistema), en el
