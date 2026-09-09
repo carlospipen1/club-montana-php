@@ -77,6 +77,17 @@ aprueba el resto en vez de rechazar todo y pedir que se mande de nuevo. Los
 botones de "aprobar todo" mandan los mismos ids a la misma función; no son otro
 camino.
 
+**`equipos.estado` es la condición física, no la disponibilidad.** Vale
+`disponible` o `mantencion` y nada más. Si un equipo está afuera, y hasta
+cuándo, se deduce de sus préstamos aprobados y de las fechas de la solicitud. La
+columna sólo sabía contestar "¿está afuera ahora?" cuando la pregunta del socio
+siempre es "¿está libre del 12 al 15?", así que una carpa prestada hasta el 15
+figuraba como no disponible para pedirla en noviembre. Lo único que impide
+marcar un equipo en el listado es la mantención. `reservado` y `prestado` siguen
+en el enum por las filas viejas —sacarlos obliga a recrear el tipo—, pero nada
+los escribe. Ojo: un préstamo aprobado cuenta como vivo aunque su fecha ya haya
+pasado; aprobado significa que salió y nadie registró la vuelta.
+
 **Una solicitud pendiente no reserva nada.** Pedir sólo se frena contra lo ya
 **aprobado**, que es equipo físicamente en manos de alguien. Que otro socio haya
 pedido lo mismo no bloquea: a quién se le presta lo decide quien lleva los

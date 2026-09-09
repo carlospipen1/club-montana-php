@@ -7,14 +7,14 @@ import { z } from "zod";
 import { db } from "@/db";
 import {
   equipos,
-  estadoEquipoEnum,
+  ESTADOS_EQUIPO_VIGENTES,
   prestamos,
   solicitudesPrestamo,
 } from "@/db/schema";
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
 import { CATEGORIAS_EQUIPO } from "@/lib/equipos";
 import { notificarA, notificarAQuienesPueden } from "@/lib/notificar";
-import { hoyISO } from "@/lib/utils";
+import { formatearFecha, hoyISO } from "@/lib/utils";
 import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
 
 /* -------------------------------------------------------------------------- */
@@ -26,7 +26,8 @@ const esquemaEquipo = z.object({
   // Lista cerrada y compartida con el formulario: ver src/lib/equipos.ts.
   categoria: z.enum(CATEGORIAS_EQUIPO, "Elige una categoría de la lista."),
   descripcion: z.string().trim().optional(),
-  estado: z.enum(estadoEquipoEnum.enumValues),
+  // Sólo la condición física: si está prestado lo dicen los préstamos.
+  estado: z.enum(ESTADOS_EQUIPO_VIGENTES),
   fechaAdquisicion: z.string().trim().optional(),
 });
 
@@ -222,7 +223,7 @@ export async function accionSolicitarPrestamo(
           .at(-1);
         choque =
           nombres.length === 1
-            ? `${nombres[0]} está prestado hasta el ${devolucion}. Sácalo del pedido o prueba con otro rango.`
+            ? `${nombres[0]} está prestado hasta el ${formatearFecha(devolucion ?? null)}. Sácalo del pedido o prueba con otro rango.`
             : `${listar(nombres)} están prestados en esas fechas. Sácalos del pedido o prueba con otro rango.`;
         // Nada escrito todavía: se sale sin dejar rastro.
         tx.rollback();
@@ -443,7 +444,6 @@ async function aplicarDecision(
     }
 
     const ids = aplicables.map((i) => i.id);
-    const equipoIds = aplicables.map((i) => i.equipoId);
 
     await tx
       .update(prestamos)
@@ -459,19 +459,12 @@ async function aplicarDecision(
       )
       .where(inArray(prestamos.id, ids));
 
-    // Rechazar no toca el equipo: la solicitud nunca lo bloqueó. Aprobar lo
-    // marca prestado, y la devolución lo libera.
-    if (decision === "aprobado") {
-      await tx
-        .update(equipos)
-        .set({ estado: "prestado" })
-        .where(inArray(equipos.id, equipoIds));
-    } else if (decision === "devuelto") {
-      await tx
-        .update(equipos)
-        .set({ estado: "disponible" })
-        .where(inArray(equipos.id, equipoIds));
-    }
+    // Ninguna de las tres decisiones toca `equipos.estado`. Esa columna dice la
+    // condición física —disponible o en mantención— y nada más: que un equipo
+    // esté afuera, y hasta cuándo, lo dicen sus préstamos aprobados. Marcarlo
+    // "prestado" lo sacaba del inventario hasta que alguien registrara la
+    // devolución, así que no se podía pedir para un fin de semana posterior
+    // aunque estuviera libre.
   });
 
   return {

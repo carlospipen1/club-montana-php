@@ -60,15 +60,24 @@ function CamposEquipo({
         </Selector>
       </Campo>
 
-      <Campo id="estado" etiqueta="Estado" requerido>
+      {/* Sólo la condición física. "Prestado" y "reservado" salieron de acá: no
+          son algo que alguien marque a mano, son consecuencia de los préstamos
+          y de sus fechas, y el listado los muestra deducidos. */}
+      <Campo
+        id="estado"
+        etiqueta="Condición"
+        requerido
+        ayuda="Si está prestado no se marca acá: lo dicen sus préstamos."
+      >
         <Selector
           id="estado"
           name="estado"
-          defaultValue={valores?.estado ?? equipo?.estado ?? "disponible"}
+          defaultValue={
+            valores?.estado ??
+            (equipo?.estado === "mantencion" ? "mantencion" : "disponible")
+          }
         >
           <option value="disponible">Disponible</option>
-          <option value="reservado">Reservado</option>
-          <option value="prestado">Prestado</option>
           <option value="mantencion">En mantención</option>
         </Selector>
       </Campo>

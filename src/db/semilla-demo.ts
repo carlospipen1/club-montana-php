@@ -101,15 +101,15 @@ export async function sembrarDemo(): Promise<void> {
     {
       categoria: "Seguridad",
       nombre: "Casco Petzl Boreo",
-      // Sale prestado junto con el arnés, en la misma solicitud: es el caso
-      // que la demostración tiene que mostrar de entrada.
-      estado: "prestado",
+      // Que esté prestado no se marca acá: lo dice su préstamo aprobado más
+      // abajo. Esta columna es sólo la condición física.
+      estado: "disponible",
       fechaAdquisicion: "2023-04-10",
     },
     {
       categoria: "Seguridad",
       nombre: "Arnés Black Diamond Momentum",
-      estado: "prestado",
+      estado: "disponible",
       fechaAdquisicion: "2023-04-10",
     },
     {

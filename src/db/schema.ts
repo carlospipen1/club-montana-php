@@ -46,12 +46,28 @@ export const estadoAlbumEnum = pgEnum("estado_album", ["borrador", "publicado"])
 export const tipoMiembroEnum = pgEnum("tipo_miembro", ["general", "estudiante"]);
 export const estadoUsuarioEnum = pgEnum("estado_usuario", ["activo", "inactivo"]);
 
+/**
+ * Condición física de un equipo. **No** dice si está disponible.
+ *
+ * Si está prestado o comprometido se deduce de los préstamos aprobados y sus
+ * fechas, que es la única forma de contestar la pregunta que importa: no "¿está
+ * afuera ahora?" sino "¿está libre del 12 al 15?". Una columna sólo sabe
+ * contestar lo primero, y por eso mentía: una carpa prestada hasta el 15
+ * figuraba como no disponible para pedirla en noviembre.
+ *
+ * `reservado` y `prestado` quedan en el tipo por las filas que los tuvieron
+ * antes de la migración 0011, pero ya nada los escribe y el formulario no los
+ * ofrece. Sacarlos obligaría a recrear el tipo en Postgres y no vale la pena.
+ */
 export const estadoEquipoEnum = pgEnum("estado_equipo", [
   "disponible",
   "reservado",
   "prestado",
   "mantencion",
 ]);
+
+/** Los dos únicos que se usan: el resto del enum es historia. */
+export const ESTADOS_EQUIPO_VIGENTES = ["disponible", "mantencion"] as const;
 
 export const estadoPrestamoEnum = pgEnum("estado_prestamo", [
   "pendiente",

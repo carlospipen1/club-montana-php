@@ -82,12 +82,10 @@ export function Insignia({
 /*  Traducción de estados a texto + color                                      */
 /* -------------------------------------------------------------------------- */
 
-export const ESTADO_EQUIPO: Record<string, { texto: string; tono: Tono }> = {
-  disponible: { texto: "Disponible", tono: "exito" },
-  reservado: { texto: "Reservado", tono: "atencion" },
-  prestado: { texto: "Prestado", tono: "info" },
-  mantencion: { texto: "En mantención", tono: "alerta" },
-};
+/* `ESTADO_EQUIPO` vivía acá y se borró: la disponibilidad de un equipo dejó de
+   ser una etiqueta guardada. Ahora se deduce de sus préstamos y se arma en
+   `panel/equipos`, con la fecha de vuelta incluida, que es lo que el socio
+   necesita saber para elegir sus fechas. */
 
 export const ESTADO_PRESTAMO: Record<string, { texto: string; tono: Tono }> = {
   pendiente: { texto: "Pendiente", tono: "atencion" },

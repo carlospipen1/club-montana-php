@@ -1,0 +1,11 @@
+-- La columna `equipos.estado` deja de significar disponibilidad y pasa a decir
+-- sólo la condición física: disponible o en mantención. Si un equipo está
+-- prestado o comprometido se deduce de los préstamos aprobados y sus fechas.
+--
+-- Las filas que quedaron marcadas como prestadas o reservadas por el código
+-- anterior vuelven a "disponible": lo que está afuera lo dice el préstamo, y
+-- dejarlas así las sacaría del inventario para siempre.
+--
+-- Los valores 'reservado' y 'prestado' se quedan en el tipo. Sacarlos obliga a
+-- recrear el enum entero y no aporta nada: ya nada los escribe.
+UPDATE equipos SET estado = 'disponible' WHERE estado IN ('prestado', 'reservado');
