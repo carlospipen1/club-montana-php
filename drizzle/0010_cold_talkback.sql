@@ -1,0 +1,1 @@
+ALTER TYPE "public"."estado_prestamo" ADD VALUE 'cancelado';

@@ -39,6 +39,7 @@ import {
   TarjetaCabecera,
   Vacio,
 } from "@/components/ui/superficie";
+import { CancelarSolicitud } from "./cancelar";
 
 export const metadata = { title: "Mi actividad" };
 
@@ -62,18 +63,20 @@ export default async function PaginaMiActividad() {
       .where(eq(inscripciones.usuarioId, usuario.id))
       .orderBy(desc(salidas.fechaSalida)),
 
-    // Una fila por equipo, con las fechas y el motivo que vienen del pedido al
-    // que pertenece. Los equipos de un mismo pedido quedan juntos, que es como
-    // se piden y como se devuelven.
+    // Una fila por equipo, con los datos del pedido al que pertenece. Se
+    // agrupan más abajo: el socio pide, cancela y devuelve por pedido, aunque
+    // cada equipo tenga su propia respuesta.
     db
       .select({
         id: prestamos.id,
+        solicitudId: prestamos.solicitudId,
         estado: prestamos.estado,
         fechaSolicitud: solicitudesPrestamo.fechaSolicitud,
         fechaDesde: solicitudesPrestamo.fechaDesde,
         fechaHasta: solicitudesPrestamo.fechaHasta,
         motivo: solicitudesPrestamo.motivo,
         notaResolucion: prestamos.notaResolucion,
+        fechaDevolucion: prestamos.fechaDevolucion,
         equipoNombre: equipos.nombre,
       })
       .from(prestamos)
@@ -88,6 +91,32 @@ export default async function PaginaMiActividad() {
       .where(eq(cuotasMensuales.usuarioId, usuario.id))
       .orderBy(desc(cuotasMensuales.anio), desc(cuotasMensuales.mes)),
   ]);
+
+  // Los equipos vienen ordenados por pedido; agruparlos es recorrer una vez y
+  // abrir un grupo nuevo cuando cambia la solicitud.
+  const misPedidos: {
+    id: number;
+    fechaSolicitud: Date;
+    fechaDesde: string;
+    fechaHasta: string;
+    motivo: string;
+    items: typeof misPrestamos;
+  }[] = [];
+
+  for (const item of misPrestamos) {
+    const ultimo = misPedidos[misPedidos.length - 1];
+    if (ultimo?.id === item.solicitudId) ultimo.items.push(item);
+    else {
+      misPedidos.push({
+        id: item.solicitudId,
+        fechaSolicitud: item.fechaSolicitud,
+        fechaDesde: item.fechaDesde,
+        fechaHasta: item.fechaHasta,
+        motivo: item.motivo,
+        items: [item],
+      });
+    }
+  }
 
   const asistidas = misSalidas.filter((s) => s.asistio).length;
   const totalPagado = misCuotas.reduce((a, c) => a + c.montoPagado, 0);
@@ -185,57 +214,97 @@ export default async function PaginaMiActividad() {
           titulo="Mis préstamos"
           descripcion="Equipo del club que has solicitado"
         />
-        {misPrestamos.length === 0 ? (
+        {misPedidos.length === 0 ? (
           <Vacio
             icono={<Backpack aria-hidden />}
             titulo="No has pedido equipo"
             descripcion="Puedes solicitarlo desde la sección Equipos."
           />
         ) : (
-          <Tabla>
-            <TablaCabecera>
-              <tr>
-                <Th>Equipo</Th>
-                <Th>Solicitado</Th>
-                <Th>Período</Th>
-                <Th>Motivo</Th>
-                <Th>Estado</Th>
-              </tr>
-            </TablaCabecera>
-            <TablaCuerpo>
-              {misPrestamos.map((p) => (
-                <Fila key={p.id}>
-                  <Td className="font-medium text-stone-900">{p.equipoNombre}</Td>
-                  <Td className="whitespace-nowrap">
-                    {formatearFecha(p.fechaSolicitud)}
-                  </Td>
-                  <Td className="whitespace-nowrap">
-                    {formatearFecha(p.fechaDesde)}
-                    <span className="text-stone-400"> → </span>
-                    {formatearFecha(p.fechaHasta)}
-                  </Td>
-                  <Td>
-                    <p className="line-clamp-2 max-w-xs text-xs">{p.motivo}</p>
-                    {p.notaResolucion && (
-                      <p className="mt-1 line-clamp-2 max-w-xs text-xs text-stone-500 italic">
-                        Respuesta: {p.notaResolucion}
+          <div className="divide-y divide-stone-200">
+            {misPedidos.map((pedido) => {
+              const pendientes = pedido.items.filter(
+                (i) => i.estado === "pendiente",
+              ).length;
+              const atraso = diasDeAtraso(pedido.fechaHasta);
+              const enSuPoder = pedido.items.some((i) => i.estado === "aprobado");
+
+              return (
+                <section key={pedido.id} className="px-5 py-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm text-stone-700">
+                        {formatearFecha(pedido.fechaDesde)}
+                        <span className="text-stone-400"> → </span>
+                        <span
+                          className={
+                            atraso > 0 && enSuPoder
+                              ? "font-medium text-red-700"
+                              : undefined
+                          }
+                        >
+                          {formatearFecha(pedido.fechaHasta)}
+                        </span>
                       </p>
-                    )}
-                  </Td>
-                  <Td>
-                    {p.estado === "aprobado" && diasDeAtraso(p.fechaHasta) > 0 ? (
-                      <Insignia tono="alerta">
-                        <AlarmClock className="size-3" aria-hidden />
-                        Devolución vencida
-                      </Insignia>
-                    ) : (
-                      <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={p.estado} />
-                    )}
-                  </Td>
-                </Fila>
-              ))}
-            </TablaCuerpo>
-          </Tabla>
+                      <p className="text-xs text-stone-500">
+                        {pedido.items.length === 1
+                          ? "1 equipo"
+                          : `${pedido.items.length} equipos`}
+                        , pedidos el {formatearFecha(pedido.fechaSolicitud)}
+                      </p>
+                      <p className="mt-1 max-w-prose text-sm text-stone-600 italic">
+                        “{pedido.motivo}”
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      {atraso > 0 && enSuPoder && (
+                        <Insignia tono="alerta">
+                          <AlarmClock className="size-3" aria-hidden />
+                          Devolución vencida
+                        </Insignia>
+                      )}
+                      {/* Mientras nadie haya respondido, el pedido es del socio
+                          y puede retirarlo. Después ya no: lo aprobado se
+                          devuelve, no se cancela. */}
+                      {pendientes > 0 && (
+                        <CancelarSolicitud
+                          solicitudId={pedido.id}
+                          pendientes={pendientes}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200">
+                    {pedido.items.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-stone-800">
+                            {item.equipoNombre}
+                          </p>
+                          {item.notaResolucion && (
+                            <p className="truncate text-xs text-stone-500 italic">
+                              Respuesta: {item.notaResolucion}
+                            </p>
+                          )}
+                          {item.fechaDevolucion && (
+                            <p className="text-xs text-stone-500">
+                              Devuelto el {formatearFecha(item.fechaDevolucion)}
+                            </p>
+                          )}
+                        </div>
+                        <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={item.estado} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
         )}
       </Tarjeta>
 

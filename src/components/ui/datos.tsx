@@ -94,6 +94,7 @@ export const ESTADO_PRESTAMO: Record<string, { texto: string; tono: Tono }> = {
   aprobado: { texto: "Aprobado", tono: "exito" },
   rechazado: { texto: "Rechazado", tono: "alerta" },
   devuelto: { texto: "Devuelto", tono: "neutro" },
+  cancelado: { texto: "Cancelado", tono: "neutro" },
 };
 
 export const ESTADO_SALIDA: Record<string, { texto: string; tono: Tono }> = {

@@ -58,6 +58,9 @@ export const estadoPrestamoEnum = pgEnum("estado_prestamo", [
   "aprobado",
   "rechazado",
   "devuelto",
+  // Lo retira quien pidió, mientras nadie le haya respondido. No es un rechazo:
+  // la directiva no decidió nada, y el equipo se libera igual.
+  "cancelado",
 ]);
 
 export const dificultadEnum = pgEnum("dificultad", [

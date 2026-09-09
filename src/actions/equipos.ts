@@ -259,6 +259,80 @@ export async function accionSolicitarPrestamo(
   );
 }
 
+/**
+ * Retirar un pedido que todavía nadie respondió.
+ *
+ * Sin esto, al socio que se arrepiente o al que se le cae la salida no le
+ * quedaba más que avisar por WhatsApp y esperar a que la directiva rechazara su
+ * solicitud a mano. Mientras tanto el equipo seguía comprometido en esas fechas
+ * y nadie más podía pedirlo.
+ *
+ * Cancelar no es rechazar: nadie de la directiva decidió nada, y por eso es un
+ * estado propio y no un rechazo firmado por el mismo que pidió. Sólo alcanza a
+ * lo que siga pendiente; lo que ya está aprobado se devuelve, no se cancela.
+ */
+export async function accionCancelarSolicitud(
+  _estado: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const usuario = await requerirUsuario();
+
+  const solicitudId = Number(formData.get("solicitudId"));
+  if (!Number.isInteger(solicitudId)) return fallo("Solicitud no válida.", formData);
+
+  const [solicitud] = await db
+    .select({ usuarioId: solicitudesPrestamo.usuarioId })
+    .from(solicitudesPrestamo)
+    .where(eq(solicitudesPrestamo.id, solicitudId))
+    .limit(1);
+
+  if (!solicitud) return fallo("Esa solicitud no existe.", formData);
+
+  // Cancela quien pidió, y nadie más. Para la directiva el camino es rechazar,
+  // que además deja un motivo escrito.
+  if (solicitud.usuarioId !== usuario.id) {
+    return fallo("Sólo puedes cancelar tus propias solicitudes.", formData);
+  }
+
+  const cancelados = await db
+    .update(prestamos)
+    .set({
+      estado: "cancelado",
+      resueltoPor: usuario.id,
+      fechaResolucion: new Date(),
+    })
+    .where(
+      and(eq(prestamos.solicitudId, solicitudId), eq(prestamos.estado, "pendiente")),
+    )
+    .returning({ id: prestamos.id });
+
+  if (cancelados.length === 0) {
+    return fallo(
+      "Esa solicitud ya fue respondida, así que no se puede cancelar. Si ya tienes el equipo, hay que registrar la devolución.",
+      formData,
+    );
+  }
+
+  await notificarAQuienesPueden(
+    "gestionarPrestamos",
+    {
+      tipo: "equipo",
+      titulo: "Un socio canceló su solicitud",
+      mensaje: `${usuario.nombres} ${usuario.apellidos} retiró su pedido de ${cancelados.length === 1 ? "1 equipo" : `${cancelados.length} equipos`}. Esos equipos vuelven a estar libres en esas fechas.`,
+      enlace: `/panel/prestamos#solicitud-${solicitudId}`,
+    },
+    usuario.id,
+  );
+
+  revalidarPrestamos();
+
+  return exito(
+    cancelados.length === 1
+      ? "Solicitud cancelada."
+      : `Solicitud cancelada: se retiraron ${cancelados.length} equipos.`,
+  );
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Resolución de préstamos                                                    */
 /* -------------------------------------------------------------------------- */
