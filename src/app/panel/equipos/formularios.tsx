@@ -1,12 +1,8 @@
 "use client";
 
-import { Pencil, Plus, Send } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 
-import {
-  accionActualizarEquipo,
-  accionCrearEquipo,
-  accionSolicitarPrestamo,
-} from "@/actions/equipos";
+import { accionActualizarEquipo, accionCrearEquipo } from "@/actions/equipos";
 import type { EstadoFormulario } from "@/actions/tipos";
 import { BotonEnviar, Modal } from "@/components/ui/acciones";
 import { useModalAccion } from "@/components/ui/usar-modal-accion";
@@ -175,104 +171,6 @@ export function EditarEquipo({ equipo }: { equipo: Equipo }) {
             <BotonEnviar>Guardar</BotonEnviar>
           </div>
         </form>
-      </Modal>
-    </>
-  );
-}
-
-export function SolicitarPrestamo({ equipo }: { equipo: Equipo }) {
-  const { abierto, abrir, cerrar, estado, accion } = useModalAccion(
-    accionSolicitarPrestamo,
-    {
-      cerrarAlExito: false,
-    },
-  );
-
-  return (
-    <>
-      <Boton variante="outline" tamano="sm" onClick={abrir}>
-        <Send aria-hidden />
-        Solicitar
-      </Boton>
-
-      <Modal
-        abierto={abierto}
-        onCerrar={cerrar}
-        titulo={`Solicitar ${equipo.nombre}`}
-        descripcion="La directiva revisará tu solicitud y te avisará por notificación."
-      >
-        {estado.ok ? (
-          <div className="space-y-4">
-            <Aviso tono="exito">{estado.mensaje}</Aviso>
-            <div className="flex justify-end">
-              <Boton variante="outline" onClick={cerrar}>
-                Listo
-              </Boton>
-            </div>
-          </div>
-        ) : (
-          <form action={accion} className="space-y-4" noValidate>
-            <input type="hidden" name="equipoId" value={equipo.id} />
-
-            {estado.mensaje && <Aviso tono="error">{estado.mensaje}</Aviso>}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Campo
-                id="fechaDesde"
-                etiqueta="Lo retiro el"
-                requerido
-                error={estado.errores?.fechaDesde?.[0]}
-              >
-                <Input
-                  id="fechaDesde"
-                  name="fechaDesde"
-                  type="date"
-                  min={hoyISO()}
-                  defaultValue={estado.valores?.fechaDesde ?? hoyISO()}
-                  required
-                />
-              </Campo>
-
-              <Campo
-                id="fechaHasta"
-                etiqueta="Lo devuelvo el"
-                requerido
-                error={estado.errores?.fechaHasta?.[0]}
-              >
-                <Input
-                  id="fechaHasta"
-                  name="fechaHasta"
-                  type="date"
-                  min={hoyISO()}
-                  defaultValue={estado.valores?.fechaHasta}
-                  required
-                />
-              </Campo>
-            </div>
-
-            <Campo
-              id="motivo"
-              etiqueta="¿Para qué lo necesitas?"
-              requerido
-              error={estado.errores?.motivo?.[0]}
-            >
-              <AreaTexto
-                id="motivo"
-                name="motivo"
-                defaultValue={estado.valores?.motivo}
-                placeholder="Salida al Cerro El Manzano el fin de semana."
-                required
-              />
-            </Campo>
-
-            <div className="flex justify-end gap-2">
-              <Boton type="button" variante="ghost" onClick={cerrar}>
-                Cancelar
-              </Boton>
-              <BotonEnviar cargando="Enviando…">Enviar solicitud</BotonEnviar>
-            </div>
-          </form>
-        )}
       </Modal>
     </>
   );

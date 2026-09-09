@@ -8,6 +8,7 @@ import {
   inscripciones,
   prestamos,
   salidas,
+  solicitudesPrestamo,
 } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import {
@@ -61,21 +62,25 @@ export default async function PaginaMiActividad() {
       .where(eq(inscripciones.usuarioId, usuario.id))
       .orderBy(desc(salidas.fechaSalida)),
 
+    // Una fila por equipo, con las fechas y el motivo que vienen del pedido al
+    // que pertenece. Los equipos de un mismo pedido quedan juntos, que es como
+    // se piden y como se devuelven.
     db
       .select({
         id: prestamos.id,
         estado: prestamos.estado,
-        fechaSolicitud: prestamos.fechaSolicitud,
-        fechaDesde: prestamos.fechaDesde,
-        fechaHasta: prestamos.fechaHasta,
-        motivo: prestamos.motivo,
+        fechaSolicitud: solicitudesPrestamo.fechaSolicitud,
+        fechaDesde: solicitudesPrestamo.fechaDesde,
+        fechaHasta: solicitudesPrestamo.fechaHasta,
+        motivo: solicitudesPrestamo.motivo,
         notaResolucion: prestamos.notaResolucion,
         equipoNombre: equipos.nombre,
       })
       .from(prestamos)
       .innerJoin(equipos, eq(prestamos.equipoId, equipos.id))
-      .where(eq(prestamos.usuarioId, usuario.id))
-      .orderBy(desc(prestamos.fechaSolicitud)),
+      .innerJoin(solicitudesPrestamo, eq(prestamos.solicitudId, solicitudesPrestamo.id))
+      .where(eq(solicitudesPrestamo.usuarioId, usuario.id))
+      .orderBy(desc(solicitudesPrestamo.fechaSolicitud), equipos.nombre),
 
     db
       .select()
@@ -103,9 +108,9 @@ export default async function PaginaMiActividad() {
           icono={<Mountain aria-hidden />}
         />
         <Metrica
-          etiqueta="Préstamos"
+          etiqueta="Equipos pedidos"
           valor={misPrestamos.length}
-          detalle="Solicitudes históricas"
+          detalle="En toda tu historia en el club"
           icono={<Backpack aria-hidden />}
         />
         <Metrica

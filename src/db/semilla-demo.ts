@@ -12,6 +12,7 @@ import {
   prestamos,
   reuniones,
   salidas,
+  solicitudesPrestamo,
   usuarios,
 } from "./schema";
 import { hashPassword } from "@/lib/password";
@@ -52,7 +53,7 @@ export async function sembrarDemo(): Promise<void> {
       notificaciones, fotos, albumes, actas,
       cuotas_mensuales, cuotas_anuales,
       asistencias, reuniones,
-      inscripciones, salidas, prestamos, equipos, usuarios
+      inscripciones, salidas, prestamos, solicitudes_prestamo, equipos, usuarios
     restart identity cascade
   `);
 
@@ -100,7 +101,9 @@ export async function sembrarDemo(): Promise<void> {
     {
       categoria: "Seguridad",
       nombre: "Casco Petzl Boreo",
-      estado: "disponible",
+      // Sale prestado junto con el arnés, en la misma solicitud: es el caso
+      // que la demostración tiene que mostrar de entrada.
+      estado: "prestado",
       fechaAdquisicion: "2023-04-10",
     },
     {
@@ -147,35 +150,103 @@ export async function sembrarDemo(): Promise<void> {
     },
   ]);
 
-  await db.insert(prestamos).values([
+  // Cuatro pedidos que cubren los cuatro estados en que puede estar uno: en la
+  // calle, cerrado, esperando respuesta y resuelto a medias. El último es el
+  // que muestra lo que el sistema hace y una planilla no: aprobar unas cosas y
+  // rechazar otras dentro del mismo pedido.
+  await db.insert(solicitudesPrestamo).values([
     {
-      equipoId: 2,
       usuarioId: 3,
+      fechaSolicitud: new Date("2026-08-18T13:05:00Z"),
       fechaDesde: "2026-08-20",
       fechaHasta: "2026-09-05",
       motivo: "Salida al volcán Lonquimay.",
-      estado: "aprobado",
-      aprobadoPor: 4,
-      fechaAprobacion: new Date("2026-08-18T14:20:00Z"),
     },
     {
-      equipoId: 6,
       usuarioId: 7,
+      fechaSolicitud: new Date("2026-06-10T17:30:00Z"),
       fechaDesde: "2026-06-12",
       fechaHasta: "2026-06-16",
-      motivo: "Campamento en Malalcahuello.",
+      motivo: "Campamento en Malalcahuello, dos noches.",
+    },
+    {
+      usuarioId: 8,
+      fechaSolicitud: new Date("2026-09-08T21:40:00Z"),
+      fechaDesde: "2026-09-12",
+      fechaHasta: "2026-09-15",
+      motivo: "Primera salida a nieve: crampones, cuerda y algo para cocinar.",
+    },
+    {
+      usuarioId: 9,
+      fechaSolicitud: new Date("2026-07-02T15:10:00Z"),
+      fechaDesde: "2026-07-04",
+      fechaHasta: "2026-07-06",
+      motivo: "Travesía corta por el Parque Nahuelbuta.",
+    },
+  ]);
+
+  await db.insert(prestamos).values([
+    // Pedido 1: dos equipos aprobados juntos y todavía en la calle.
+    {
+      solicitudId: 1,
+      equipoId: 1,
+      estado: "aprobado",
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-08-18T14:20:00Z"),
+    },
+    {
+      solicitudId: 1,
+      equipoId: 2,
+      estado: "aprobado",
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-08-18T14:20:00Z"),
+    },
+
+    // Pedido 2: cerrado, con la devolución registrada aparte de la aprobación.
+    {
+      solicitudId: 2,
+      equipoId: 6,
       estado: "devuelto",
-      aprobadoPor: 4,
-      fechaAprobacion: new Date("2026-06-10T18:00:00Z"),
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-06-10T18:00:00Z"),
+      devueltoPor: 4,
+      fechaDevolucion: new Date("2026-06-17T12:00:00Z"),
       notaResolucion: "Devuelta en buen estado.",
     },
     {
-      equipoId: 4,
-      usuarioId: 8,
-      fechaDesde: "2026-09-12",
-      fechaHasta: "2026-09-15",
-      motivo: "Primera salida a nieve, necesito crampones.",
-      estado: "pendiente",
+      solicitudId: 2,
+      equipoId: 7,
+      estado: "devuelto",
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-06-10T18:00:00Z"),
+      devueltoPor: 4,
+      fechaDevolucion: new Date("2026-06-17T12:00:00Z"),
+    },
+
+    // Pedido 3: tres equipos esperando respuesta. Es con lo que juega quien
+    // entra a la demostración como encargado.
+    { solicitudId: 3, equipoId: 3, estado: "pendiente" },
+    { solicitudId: 3, equipoId: 4, estado: "pendiente" },
+    { solicitudId: 3, equipoId: 8, estado: "pendiente" },
+
+    // Pedido 4: la carpa no estaba, lo demás sí. Antes esto obligaba a
+    // rechazar el pedido entero.
+    {
+      solicitudId: 4,
+      equipoId: 6,
+      estado: "rechazado",
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-07-02T16:00:00Z"),
+      notaResolucion: "La carpa ya estaba comprometida para ese fin de semana.",
+    },
+    {
+      solicitudId: 4,
+      equipoId: 8,
+      estado: "devuelto",
+      resueltoPor: 4,
+      fechaResolucion: new Date("2026-07-02T16:00:00Z"),
+      devueltoPor: 4,
+      fechaDevolucion: new Date("2026-07-07T10:30:00Z"),
     },
   ]);
 

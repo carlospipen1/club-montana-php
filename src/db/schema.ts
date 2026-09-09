@@ -164,13 +164,22 @@ export const equipos = pgTable("equipos", {
   creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const prestamos = pgTable(
-  "prestamos",
+/**
+ * Una solicitud de préstamo: lo que un socio pide de una vez.
+ *
+ * Antes cada equipo era una solicitud suelta, y salir a la montaña —carpa,
+ * cuerdas, cintas— obligaba a llenar el mismo formulario cinco veces y le
+ * llegaban cinco avisos a quien resuelve. Acá van las fechas y el motivo, que
+ * son del pedido completo, y cada equipo va como una fila de `prestamos`.
+ *
+ * No guarda estado a propósito: se deriva de sus ítems. Si lo guardara, habría
+ * que decidir qué dice cuando se aprobaron cuatro cosas de cinco, y ese valor
+ * se desincronizaría el día que alguien resuelva la quinta.
+ */
+export const solicitudesPrestamo = pgTable(
+  "solicitudes_prestamo",
   {
     id: serial("id").primaryKey(),
-    equipoId: integer("equipo_id")
-      .notNull()
-      .references(() => equipos.id, { onDelete: "cascade" }),
     usuarioId: integer("usuario_id")
       .notNull()
       .references(() => usuarios.id, { onDelete: "cascade" }),
@@ -180,18 +189,55 @@ export const prestamos = pgTable(
     fechaDesde: date("fecha_desde").notNull(),
     fechaHasta: date("fecha_hasta").notNull(),
     motivo: text("motivo").notNull(),
+  },
+  (t) => [
+    index("solicitudes_prestamo_usuario_idx").on(t.usuarioId, t.fechaSolicitud),
+    // El listado de quien resuelve ordena por fecha de solicitud, descendente.
+    index("solicitudes_prestamo_fecha_idx").on(t.fechaSolicitud),
+  ],
+);
+
+/**
+ * Cada equipo dentro de una solicitud, con su propio estado.
+ *
+ * Se resuelve uno por uno: si de cinco cosas hay una comprometida, quien
+ * resuelve aprueba las otras cuatro en vez de rechazar el pedido entero y
+ * pedirle al socio que lo mande de nuevo.
+ *
+ * La resolución y la devolución guardan autor y fecha por separado. Antes
+ * compartían columnas, así que registrar la devolución pisaba quién había
+ * aprobado y cuándo.
+ */
+export const prestamos = pgTable(
+  "prestamos",
+  {
+    id: serial("id").primaryKey(),
+    solicitudId: integer("solicitud_id")
+      .notNull()
+      .references(() => solicitudesPrestamo.id, { onDelete: "cascade" }),
+    equipoId: integer("equipo_id")
+      .notNull()
+      .references(() => equipos.id, { onDelete: "cascade" }),
     estado: estadoPrestamoEnum("estado").notNull().default("pendiente"),
-    aprobadoPor: integer("aprobado_por").references(() => usuarios.id, {
+    resueltoPor: integer("resuelto_por").references(() => usuarios.id, {
       onDelete: "set null",
     }),
-    fechaAprobacion: timestamp("fecha_aprobacion", { withTimezone: true }),
+    fechaResolucion: timestamp("fecha_resolucion", { withTimezone: true }),
     notaResolucion: text("nota_resolucion"),
+    devueltoPor: integer("devuelto_por").references(() => usuarios.id, {
+      onDelete: "set null",
+    }),
+    fechaDevolucion: timestamp("fecha_devolucion", { withTimezone: true }),
   },
   (t) => [
     index("prestamos_estado_idx").on(t.estado),
-    index("prestamos_usuario_idx").on(t.usuarioId),
-    // Para detectar choques de fechas sobre un mismo equipo al solicitar.
-    index("prestamos_equipo_fechas_idx").on(t.equipoId, t.fechaDesde, t.fechaHasta),
+    // Para los choques de fechas: se filtra por equipo y recién ahí se cruza
+    // con las fechas, que ahora viven en la solicitud.
+    index("prestamos_equipo_idx").on(t.equipoId),
+    index("prestamos_solicitud_idx").on(t.solicitudId),
+    // El mismo equipo dos veces en el mismo pedido no significa nada, y en el
+    // listado de quien resuelve aparecería duplicado.
+    unique("prestamos_solicitud_equipo_unico").on(t.solicitudId, t.equipoId),
   ],
 );
 
@@ -563,7 +609,7 @@ export const tokensRecuperacion = pgTable(
 /* -------------------------------------------------------------------------- */
 
 export const usuariosRelations = relations(usuarios, ({ many }) => ({
-  prestamos: many(prestamos),
+  solicitudesPrestamo: many(solicitudesPrestamo),
   inscripciones: many(inscripciones),
   cuotas: many(cuotasMensuales),
   notificaciones: many(notificaciones),
@@ -581,11 +627,22 @@ export const equiposRelations = relations(equipos, ({ many }) => ({
   prestamos: many(prestamos),
 }));
 
+export const solicitudesPrestamoRelations = relations(
+  solicitudesPrestamo,
+  ({ one, many }) => ({
+    usuario: one(usuarios, {
+      fields: [solicitudesPrestamo.usuarioId],
+      references: [usuarios.id],
+    }),
+    items: many(prestamos),
+  }),
+);
+
 export const prestamosRelations = relations(prestamos, ({ one }) => ({
   equipo: one(equipos, { fields: [prestamos.equipoId], references: [equipos.id] }),
-  usuario: one(usuarios, {
-    fields: [prestamos.usuarioId],
-    references: [usuarios.id],
+  solicitud: one(solicitudesPrestamo, {
+    fields: [prestamos.solicitudId],
+    references: [solicitudesPrestamo.id],
   }),
 }));
 
@@ -622,6 +679,7 @@ export const cuotasMensualesRelations = relations(cuotasMensuales, ({ one }) => 
 export type Usuario = typeof usuarios.$inferSelect;
 export type NuevoUsuario = typeof usuarios.$inferInsert;
 export type Equipo = typeof equipos.$inferSelect;
+export type SolicitudPrestamo = typeof solicitudesPrestamo.$inferSelect;
 export type Prestamo = typeof prestamos.$inferSelect;
 export type Salida = typeof salidas.$inferSelect;
 export type Inscripcion = typeof inscripciones.$inferSelect;

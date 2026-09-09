@@ -2,20 +2,16 @@ import { desc, eq } from "drizzle-orm";
 import { AlarmClock, Backpack, ClipboardCheck } from "lucide-react";
 
 import { db } from "@/db";
-import { equipos, prestamos, usuarios } from "@/db/schema";
+import {
+  equipos,
+  estadoPrestamoEnum,
+  prestamos,
+  solicitudesPrestamo,
+  usuarios,
+} from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { diasDeAtraso, formatearFecha, formatearFechaHora } from "@/lib/utils";
-import {
-  ESTADO_PRESTAMO,
-  Insignia,
-  Fila,
-  InsigniaEstado,
-  Tabla,
-  TablaCabecera,
-  TablaCuerpo,
-  Td,
-  Th,
-} from "@/components/ui/datos";
+import { ESTADO_PRESTAMO, Insignia, InsigniaEstado } from "@/components/ui/datos";
 import {
   CabeceraPagina,
   Metrica,
@@ -24,159 +20,138 @@ import {
   Vacio,
 } from "@/components/ui/superficie";
 import { Aviso } from "@/components/ui/avisos";
-import { ResolverPrestamo } from "./resolver";
+import { ResolverPrestamo, ResolverSolicitud } from "./resolver";
 
 export const metadata = { title: "Préstamos" };
+
+type Item = {
+  id: number;
+  solicitudId: number;
+  estado: (typeof estadoPrestamoEnum.enumValues)[number];
+  notaResolucion: string | null;
+  fechaDevolucion: Date | null;
+  equipoNombre: string;
+};
+
+type Solicitud = {
+  id: number;
+  fechaSolicitud: Date;
+  fechaDesde: string;
+  fechaHasta: string;
+  motivo: string;
+  socioNombres: string;
+  socioApellidos: string;
+  items: Item[];
+};
 
 export default async function PaginaPrestamos() {
   await requerirCapacidad("gestionarPrestamos");
 
-  const lista = await db
-    .select({
-      id: prestamos.id,
-      estado: prestamos.estado,
-      fechaSolicitud: prestamos.fechaSolicitud,
-      fechaDesde: prestamos.fechaDesde,
-      fechaHasta: prestamos.fechaHasta,
-      motivo: prestamos.motivo,
-      notaResolucion: prestamos.notaResolucion,
-      equipoNombre: equipos.nombre,
-      socioNombres: usuarios.nombres,
-      socioApellidos: usuarios.apellidos,
-      socioEmail: usuarios.email,
-    })
-    .from(prestamos)
-    .innerJoin(equipos, eq(prestamos.equipoId, equipos.id))
-    .innerJoin(usuarios, eq(prestamos.usuarioId, usuarios.id))
-    .orderBy(desc(prestamos.fechaSolicitud));
+  // Dos consultas y el agrupado en memoria, en vez de una con agregación: son
+  // decenas de filas, y así cada consulta se lee de corrido.
+  const [cabeceras, items] = await Promise.all([
+    db
+      .select({
+        id: solicitudesPrestamo.id,
+        fechaSolicitud: solicitudesPrestamo.fechaSolicitud,
+        fechaDesde: solicitudesPrestamo.fechaDesde,
+        fechaHasta: solicitudesPrestamo.fechaHasta,
+        motivo: solicitudesPrestamo.motivo,
+        socioNombres: usuarios.nombres,
+        socioApellidos: usuarios.apellidos,
+      })
+      .from(solicitudesPrestamo)
+      .innerJoin(usuarios, eq(solicitudesPrestamo.usuarioId, usuarios.id))
+      .orderBy(desc(solicitudesPrestamo.fechaSolicitud)),
 
-  const pendientes = lista.filter((p) => p.estado === "pendiente");
-  const historial = lista.filter(
-    (p) => p.estado === "rechazado" || p.estado === "devuelto",
+    db
+      .select({
+        id: prestamos.id,
+        solicitudId: prestamos.solicitudId,
+        estado: prestamos.estado,
+        notaResolucion: prestamos.notaResolucion,
+        fechaDevolucion: prestamos.fechaDevolucion,
+        equipoNombre: equipos.nombre,
+      })
+      .from(prestamos)
+      .innerJoin(equipos, eq(prestamos.equipoId, equipos.id))
+      .orderBy(equipos.nombre),
+  ]);
+
+  const porSolicitud = new Map<number, Item[]>();
+  for (const item of items) {
+    const grupo = porSolicitud.get(item.solicitudId);
+    if (grupo) grupo.push(item);
+    else porSolicitud.set(item.solicitudId, [item]);
+  }
+
+  const solicitudes: Solicitud[] = cabeceras.map((c) => ({
+    ...c,
+    items: porSolicitud.get(c.id) ?? [],
+  }));
+
+  const cuenta = (s: Solicitud, estado: Item["estado"]) =>
+    s.items.filter((i) => i.estado === estado).length;
+
+  // El estado de una solicitud no se guarda: se deduce de sus ítems. Mientras
+  // quede uno pendiente hay algo que responder; si no queda ninguno pendiente
+  // pero sí aprobados, el equipo está en la calle; y si no queda ni lo uno ni
+  // lo otro, el pedido está cerrado.
+  const porRevisar = solicitudes.filter((s) => cuenta(s, "pendiente") > 0);
+  const enCurso = solicitudes.filter(
+    (s) => cuenta(s, "pendiente") === 0 && cuenta(s, "aprobado") > 0,
+  );
+  const cerradas = solicitudes.filter(
+    (s) => cuenta(s, "pendiente") === 0 && cuenta(s, "aprobado") === 0,
   );
 
-  // Un préstamo aprobado cuya fecha de devolución ya pasó sigue figurando como
-  // equipo en la calle: nadie más lo puede pedir hasta que se registre la
-  // devolución. Se separan para que salten a la vista, ordenados por antigüedad.
-  const aprobados = lista.filter((p) => p.estado === "aprobado");
-  const atrasados = aprobados
-    .filter((p) => diasDeAtraso(p.fechaHasta) > 0)
+  const atrasadas = enCurso
+    .filter((s) => diasDeAtraso(s.fechaHasta) > 0)
     .sort((a, b) => diasDeAtraso(b.fechaHasta) - diasDeAtraso(a.fechaHasta));
-  const alDia = aprobados.filter((p) => diasDeAtraso(p.fechaHasta) === 0);
+  const alDia = enCurso.filter((s) => diasDeAtraso(s.fechaHasta) === 0);
 
-  function filas(
-    items: typeof lista,
-    acciones: (p: (typeof lista)[number]) => React.ReactNode,
-  ) {
-    return (
-      <Tabla>
-        <TablaCabecera>
-          <tr>
-            <Th>Socio</Th>
-            <Th>Equipo</Th>
-            <Th>Fechas</Th>
-            <Th>Motivo</Th>
-            <Th>Estado</Th>
-            <Th className="text-right">Acciones</Th>
-          </tr>
-        </TablaCabecera>
-        <TablaCuerpo>
-          {items.map((p) => (
-            <Fila key={p.id}>
-              <Td>
-                <p className="font-medium text-stone-900">
-                  {p.socioNombres} {p.socioApellidos}
-                </p>
-                <p className="text-xs text-stone-500">
-                  Pidió el {formatearFechaHora(p.fechaSolicitud)}
-                </p>
-              </Td>
-              <Td className="whitespace-nowrap">{p.equipoNombre}</Td>
-              <Td className="whitespace-nowrap">
-                {formatearFecha(p.fechaDesde)}
-                <span className="text-stone-400"> → </span>
-                <span
-                  className={
-                    diasDeAtraso(p.fechaHasta) > 0 && p.estado === "aprobado"
-                      ? "font-medium text-red-700"
-                      : undefined
-                  }
-                >
-                  {formatearFecha(p.fechaHasta)}
-                </span>
-              </Td>
-              <Td>
-                <p className="line-clamp-2 max-w-xs text-xs">{p.motivo}</p>
-                {p.notaResolucion && (
-                  <p className="mt-1 line-clamp-2 max-w-xs text-xs text-stone-500 italic">
-                    Nota: {p.notaResolucion}
-                  </p>
-                )}
-              </Td>
-              <Td>
-                {p.estado === "aprobado" && diasDeAtraso(p.fechaHasta) > 0 ? (
-                  <Insignia tono="alerta">
-                    <AlarmClock className="size-3" aria-hidden />
-                    {diasDeAtraso(p.fechaHasta) === 1
-                      ? "1 día de atraso"
-                      : `${diasDeAtraso(p.fechaHasta)} días de atraso`}
-                  </Insignia>
-                ) : (
-                  <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={p.estado} />
-                )}
-              </Td>
-              <Td>
-                <div className="flex items-center justify-end gap-1.5">
-                  {acciones(p)}
-                </div>
-              </Td>
-            </Fila>
-          ))}
-        </TablaCuerpo>
-      </Tabla>
-    );
-  }
+  const equiposEnLaCalle = items.filter((i) => i.estado === "aprobado").length;
 
   return (
     <>
       <CabeceraPagina
         titulo="Préstamos de equipo"
-        descripcion="Solicitudes de los socios y equipo actualmente en la calle."
+        descripcion="Cada solicitud trae adentro el equipo que se pidió. Puedes responder cosa por cosa."
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Metrica
           etiqueta="Por revisar"
-          valor={pendientes.length}
-          detalle={pendientes.length > 0 ? "Esperan tu respuesta" : "Nada pendiente"}
+          valor={porRevisar.length}
+          detalle={porRevisar.length > 0 ? "Esperan tu respuesta" : "Nada pendiente"}
           icono={<ClipboardCheck aria-hidden />}
-          tono={pendientes.length > 0 ? "atencion" : "positivo"}
+          tono={porRevisar.length > 0 ? "atencion" : "positivo"}
         />
         <Metrica
-          etiqueta="Atrasados"
-          valor={atrasados.length}
+          etiqueta="Atrasadas"
+          valor={atrasadas.length}
           detalle={
-            atrasados.length > 0
-              ? `El más antiguo, ${diasDeAtraso(atrasados[0].fechaHasta)} día(s)`
-              : "Ninguno vencido"
+            atrasadas.length > 0
+              ? `La más antigua, ${diasDeAtraso(atrasadas[0].fechaHasta)} día(s)`
+              : "Ninguna vencida"
           }
           icono={<AlarmClock aria-hidden />}
-          tono={atrasados.length > 0 ? "alerta" : "positivo"}
+          tono={atrasadas.length > 0 ? "alerta" : "positivo"}
         />
         <Metrica
-          etiqueta="En préstamo"
-          valor={aprobados.length}
+          etiqueta="Equipos prestados"
+          valor={equiposEnLaCalle}
           detalle="Fuera del inventario"
           icono={<Backpack aria-hidden />}
         />
-        <Metrica etiqueta="Historial" valor={historial.length} detalle="Ya cerrados" />
+        <Metrica etiqueta="Historial" valor={cerradas.length} detalle="Ya cerradas" />
       </div>
 
-      {atrasados.length > 0 && (
+      {atrasadas.length > 0 && (
         <Aviso tono="error" titulo="Hay equipo con la devolución vencida">
-          {atrasados.length === 1
-            ? "Un préstamo pasó su fecha de devolución y el equipo sigue figurando como prestado. "
-            : `${atrasados.length} préstamos pasaron su fecha de devolución y esos equipos siguen figurando como prestados. `}
+          {atrasadas.length === 1
+            ? "Un pedido pasó su fecha de devolución y esos equipos siguen figurando como prestados. "
+            : `${atrasadas.length} pedidos pasaron su fecha de devolución y esos equipos siguen figurando como prestados. `}
           Si ya te los entregaron, márcalos como devueltos para que vuelvan al
           inventario.
         </Aviso>
@@ -185,52 +160,41 @@ export default async function PaginaPrestamos() {
       <Tarjeta>
         <TarjetaCabecera
           titulo="Solicitudes pendientes"
-          descripcion="Esperan tu aprobación"
+          descripcion="Esperan tu respuesta. Puedes aprobar unas cosas y rechazar otras."
         />
-        {pendientes.length === 0 ? (
+        {porRevisar.length === 0 ? (
           <Vacio
             icono={<ClipboardCheck aria-hidden />}
             titulo="Nada pendiente"
             descripcion="No hay solicitudes esperando revisión."
           />
         ) : (
-          filas(pendientes, (p) => (
-            <>
-              <ResolverPrestamo
-                prestamoId={p.id}
-                decision="aprobado"
-                resumen={`${p.socioNombres} ${p.socioApellidos} pide "${p.equipoNombre}".`}
-              />
-              <ResolverPrestamo
-                prestamoId={p.id}
-                decision="rechazado"
-                resumen={`${p.socioNombres} ${p.socioApellidos} pide "${p.equipoNombre}".`}
-              />
-            </>
-          ))
+          <div className="divide-y divide-stone-200">
+            {porRevisar.map((s) => (
+              <FichaSolicitud key={s.id} solicitud={s} modo="revisar" />
+            ))}
+          </div>
         )}
       </Tarjeta>
 
-      {atrasados.length > 0 && (
+      {atrasadas.length > 0 && (
         <Tarjeta className="ring-1 ring-red-200">
           <TarjetaCabecera
             titulo="Devolución vencida"
-            descripcion="Ordenados del más atrasado al más reciente"
+            descripcion="Ordenadas de la más atrasada a la más reciente"
             className="bg-red-50/60"
             accion={
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-red-700">
                 <AlarmClock className="size-4" aria-hidden />
-                {atrasados.length}
+                {atrasadas.length}
               </span>
             }
           />
-          {filas(atrasados, (p) => (
-            <ResolverPrestamo
-              prestamoId={p.id}
-              decision="devuelto"
-              resumen={`Devolución de "${p.equipoNombre}" por ${p.socioNombres} ${p.socioApellidos}, con ${diasDeAtraso(p.fechaHasta)} día(s) de atraso.`}
-            />
-          ))}
+          <div className="divide-y divide-stone-200">
+            {atrasadas.map((s) => (
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" />
+            ))}
+          </div>
         </Tarjeta>
       )}
 
@@ -240,24 +204,153 @@ export default async function PaginaPrestamos() {
             titulo="Equipo en préstamo"
             descripcion="Aprobados y dentro del plazo"
           />
-          {filas(alDia, (p) => (
-            <ResolverPrestamo
-              prestamoId={p.id}
-              decision="devuelto"
-              resumen={`Devolución de "${p.equipoNombre}" por ${p.socioNombres} ${p.socioApellidos}.`}
-            />
-          ))}
+          <div className="divide-y divide-stone-200">
+            {alDia.map((s) => (
+              <FichaSolicitud key={s.id} solicitud={s} modo="devolver" />
+            ))}
+          </div>
         </Tarjeta>
       )}
 
-      {historial.length > 0 && (
+      {cerradas.length > 0 && (
         <Tarjeta>
           <TarjetaCabecera titulo="Historial" descripcion="Solicitudes ya cerradas" />
-          {filas(historial, () => (
-            <span className="text-xs text-stone-400">—</span>
-          ))}
+          <div className="divide-y divide-stone-200">
+            {cerradas.map((s) => (
+              <FichaSolicitud key={s.id} solicitud={s} modo="cerrada" />
+            ))}
+          </div>
         </Tarjeta>
       )}
     </>
+  );
+}
+
+/**
+ * Una solicitud con su equipo desplegado adentro.
+ *
+ * El encabezado dice quién pidió, para cuándo y para qué —eso es del pedido
+ * completo—, y cada equipo trae su propio estado y sus propios botones. Los
+ * botones del encabezado aplican la misma decisión a todo lo que quede
+ * aplicable, que es el caso normal.
+ */
+function FichaSolicitud({
+  solicitud: s,
+  modo,
+}: {
+  solicitud: Solicitud;
+  modo: "revisar" | "devolver" | "cerrada";
+}) {
+  const socio = `${s.socioNombres} ${s.socioApellidos}`;
+  const atraso = diasDeAtraso(s.fechaHasta);
+  const pendientes = s.items.filter((i) => i.estado === "pendiente").length;
+  const aprobados = s.items.filter((i) => i.estado === "aprobado").length;
+
+  return (
+    <section id={`solicitud-${s.id}`} className="px-5 py-4 scroll-mt-20">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-medium text-stone-900">{socio}</p>
+          <p className="text-xs text-stone-500">
+            Pidió {s.items.length === 1 ? "1 equipo" : `${s.items.length} equipos`} el{" "}
+            {formatearFechaHora(s.fechaSolicitud)}
+          </p>
+          <p className="mt-2 text-sm text-stone-700">
+            {formatearFecha(s.fechaDesde)}
+            <span className="text-stone-400"> → </span>
+            <span
+              className={
+                atraso > 0 && aprobados > 0 ? "font-medium text-red-700" : undefined
+              }
+            >
+              {formatearFecha(s.fechaHasta)}
+            </span>
+          </p>
+          <p className="mt-1 max-w-prose text-sm text-stone-600 italic">“{s.motivo}”</p>
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {atraso > 0 && aprobados > 0 && (
+            <Insignia tono="alerta">
+              <AlarmClock className="size-3" aria-hidden />
+              {atraso === 1 ? "1 día de atraso" : `${atraso} días de atraso`}
+            </Insignia>
+          )}
+
+          {modo === "revisar" && pendientes > 1 && (
+            <div className="flex items-center gap-1.5">
+              <ResolverSolicitud
+                solicitudId={s.id}
+                decision="aprobado"
+                resumen={`Se aprueban los ${pendientes} equipos pendientes del pedido de ${socio}.`}
+              />
+              <ResolverSolicitud
+                solicitudId={s.id}
+                decision="rechazado"
+                resumen={`Se rechazan los ${pendientes} equipos pendientes del pedido de ${socio}.`}
+              />
+            </div>
+          )}
+
+          {modo === "devolver" && aprobados > 1 && (
+            <ResolverSolicitud
+              solicitudId={s.id}
+              decision="devuelto"
+              resumen={`Vuelven al inventario los ${aprobados} equipos que ${socio} tiene en su poder.`}
+            />
+          )}
+        </div>
+      </div>
+
+      <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200">
+        {s.items.map((item) => (
+          <li
+            key={item.id}
+            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm text-stone-800">{item.equipoNombre}</p>
+              {item.notaResolucion && (
+                <p className="truncate text-xs text-stone-500 italic">
+                  Nota: {item.notaResolucion}
+                </p>
+              )}
+              {item.fechaDevolucion && (
+                <p className="text-xs text-stone-500">
+                  Devuelto el {formatearFechaHora(item.fechaDevolucion)}
+                </p>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <InsigniaEstado mapa={ESTADO_PRESTAMO} valor={item.estado} />
+
+              {item.estado === "pendiente" && (
+                <>
+                  <ResolverPrestamo
+                    prestamoId={item.id}
+                    decision="aprobado"
+                    resumen={`${socio} pide "${item.equipoNombre}".`}
+                  />
+                  <ResolverPrestamo
+                    prestamoId={item.id}
+                    decision="rechazado"
+                    resumen={`${socio} pide "${item.equipoNombre}".`}
+                  />
+                </>
+              )}
+
+              {item.estado === "aprobado" && (
+                <ResolverPrestamo
+                  prestamoId={item.id}
+                  decision="devuelto"
+                  resumen={`Devolución de "${item.equipoNombre}" por ${socio}${atraso > 0 ? `, con ${atraso} día(s) de atraso` : ""}.`}
+                />
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

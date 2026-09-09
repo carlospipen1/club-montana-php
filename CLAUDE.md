@@ -67,6 +67,21 @@ cambiar `MODO_DEMO` en un despliegue invalida todas sus sesiones, y un tercer
 despliegue necesita su propio valor de audiencia. El proxy no lo comprueba a
 propósito: corre en el edge, donde `MODO_DEMO` no está garantizado.
 
+**Una solicitud de préstamo no guarda su estado.** `solicitudes_prestamo`
+guarda quién pide, para cuándo y para qué; el estado vive en cada fila de
+`prestamos` y el de la solicitud se deduce de ellas. Si se guardara, habría que
+decidir qué dice cuando se aprobaron cuatro equipos de cinco, y ese valor se
+desincronizaría al resolver el quinto. Por lo mismo la resolución es **por
+ítem**: si de un pedido hay una cosa comprometida, quien lleva los equipos
+aprueba el resto en vez de rechazar todo y pedir que se mande de nuevo. Los
+botones de "aprobar todo" mandan los mismos ids a la misma función; no son otro
+camino.
+
+**El choque de fechas se comprueba con las filas de `equipos` bloqueadas.**
+`accionSolicitarPrestamo` hace `select ... for update` sobre los equipos del
+pedido *antes* de buscar choques. Sin eso, dos socios pidiendo el mismo saco a
+la vez pasaban los dos: cada uno leía antes de que el otro escribiera.
+
 **Las fotos se marcan, no se duplican.** Una foto pertenece a un álbum y tres
 banderas deciden dónde sale: portada del sitio (una en todo el sistema), en el
 carrusel (hasta 12) y portada del álbum.
@@ -90,6 +105,16 @@ sql`(select count(*)::int from fotos where fotos.album_id = albumes.id)`
 
 Este bug estuvo semanas en el conteo de inscritos por salida sin que nadie lo
 notara, porque el número que devolvía parecía razonable.
+
+### `db:generate` pide confirmación y acá no hay terminal
+
+Cuando una tabla gana columnas y pierde otras en el mismo cambio, `drizzle-kit`
+pregunta si se trata de un renombre, y sin TTY se cae con «Interactive prompts
+require a TTY terminal». La salida es partirlo en dos migraciones: una que sólo
+agrega —ahí se escribe a mano el relleno de los datos que ya existen— y otra que
+recién entonces borra las columnas viejas y pone los `NOT NULL`. Así fue el paso
+de préstamos sueltos a solicitudes (0008 y 0009), y el relleno del medio no lo
+escribe `drizzle-kit`: sin él, el `NOT NULL` de la segunda falla.
 
 ### Archivos `"use server"`
 

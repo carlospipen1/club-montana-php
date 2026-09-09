@@ -21,7 +21,8 @@ import {
   Th,
 } from "@/components/ui/datos";
 import { CabeceraPagina, Tarjeta, Vacio } from "@/components/ui/superficie";
-import { EditarEquipo, NuevoEquipo, SolicitarPrestamo } from "./formularios";
+import { EditarEquipo, NuevoEquipo } from "./formularios";
+import { BarraPedido, CasillaEquipo, ProveedorPedido } from "./pedido";
 
 export const metadata = { title: "Equipos" };
 
@@ -48,10 +49,10 @@ export default async function PaginaEquipos({
   const disponibles = lista.filter((e) => e.estado === "disponible").length;
 
   return (
-    <>
+    <ProveedorPedido>
       <CabeceraPagina
         titulo="Equipos del club"
-        descripcion={`${disponibles} disponible(s) de ${lista.length} en inventario.`}
+        descripcion={`${disponibles} disponible(s) de ${lista.length} en inventario. Marca lo que necesites y pídelo todo junto.`}
       >
         {puedeGestionar && <NuevoEquipo />}
       </CabeceraPagina>
@@ -92,6 +93,9 @@ export default async function PaginaEquipos({
           <Tabla>
             <TablaCabecera>
               <tr>
+                <Th className="w-10">
+                  <span className="sr-only">Agregar al pedido</span>
+                </Th>
                 <Th>Equipo</Th>
                 <Th>Categoría</Th>
                 <Th>Estado</Th>
@@ -102,6 +106,15 @@ export default async function PaginaEquipos({
             <TablaCuerpo>
               {lista.map((equipo) => (
                 <Fila key={equipo.id}>
+                  <Td>
+                    {/* Sólo lo disponible se puede marcar: lo prestado y lo que
+                        está en mantención se ve, pero no se pide. */}
+                    <CasillaEquipo
+                      id={equipo.id}
+                      nombre={equipo.nombre}
+                      deshabilitada={equipo.estado !== "disponible"}
+                    />
+                  </Td>
                   <Td>
                     <p className="font-medium text-stone-900">{equipo.nombre}</p>
                     {equipo.descripcion && (
@@ -119,9 +132,6 @@ export default async function PaginaEquipos({
                   </Td>
                   <Td>
                     <div className="flex items-center justify-end gap-1">
-                      {equipo.estado === "disponible" && (
-                        <SolicitarPrestamo equipo={equipo} />
-                      )}
                       {puedeGestionar && (
                         <>
                           <EditarEquipo equipo={equipo} />
@@ -151,6 +161,8 @@ export default async function PaginaEquipos({
           </Tabla>
         )}
       </Tarjeta>
-    </>
+
+      <BarraPedido />
+    </ProveedorPedido>
   );
 }

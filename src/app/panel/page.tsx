@@ -17,6 +17,7 @@ import {
   prestamos,
   reuniones,
   salidas,
+  solicitudesPrestamo,
 } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { formatearCLP, formatearFecha, MESES, tiempoRelativo } from "@/lib/utils";
@@ -108,12 +109,15 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
       )
       .orderBy(asc(cuotasMensuales.mes)),
 
+    // Equipos, no pedidos: lo que importa es cuántas cosas tiene pedidas o en
+    // su poder. De quién es cada préstamo lo dice ahora la solicitud.
     db
       .select({ total: count() })
       .from(prestamos)
+      .innerJoin(solicitudesPrestamo, eq(prestamos.solicitudId, solicitudesPrestamo.id))
       .where(
         and(
-          eq(prestamos.usuarioId, usuario.id),
+          eq(solicitudesPrestamo.usuarioId, usuario.id),
           inArray(prestamos.estado, ["pendiente", "aprobado"]),
         ),
       ),

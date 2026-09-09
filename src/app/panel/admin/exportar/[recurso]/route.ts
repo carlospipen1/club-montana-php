@@ -7,6 +7,7 @@ import {
   inscripciones,
   prestamos,
   salidas,
+  solicitudesPrestamo,
   usuarios,
 } from "@/db/schema";
 import { usuarioActual } from "@/lib/auth";
@@ -192,16 +193,27 @@ export async function GET(
     }
 
     case "prestamos": {
+      // Una fila por equipo, como antes, para que la planilla se siga pudiendo
+      // filtrar y sumar. La columna "Pedido" es la que dice cuáles salieron
+      // juntos: sin ella, cinco filas con la misma fecha podrían ser cinco
+      // solicitudes distintas del mismo día.
       const filas = await db
-        .select({ prestamo: prestamos, equipo: equipos, socio: usuarios })
+        .select({
+          prestamo: prestamos,
+          solicitud: solicitudesPrestamo,
+          equipo: equipos,
+          socio: usuarios,
+        })
         .from(prestamos)
         .innerJoin(equipos, eq(prestamos.equipoId, equipos.id))
-        .innerJoin(usuarios, eq(prestamos.usuarioId, usuarios.id))
-        .orderBy(desc(prestamos.fechaSolicitud));
+        .innerJoin(solicitudesPrestamo, eq(prestamos.solicitudId, solicitudesPrestamo.id))
+        .innerJoin(usuarios, eq(solicitudesPrestamo.usuarioId, usuarios.id))
+        .orderBy(desc(solicitudesPrestamo.fechaSolicitud), equipos.nombre);
 
       csv = aCsv(
         [
           "ID",
+          "Pedido",
           "Equipo",
           "Socio",
           "Solicitado",
@@ -210,17 +222,20 @@ export async function GET(
           "Motivo",
           "Estado",
           "Nota",
+          "Devuelto",
         ],
-        filas.map(({ prestamo, equipo, socio }) => [
+        filas.map(({ prestamo, solicitud, equipo, socio }) => [
           prestamo.id,
+          solicitud.id,
           equipo.nombre,
           `${socio.apellidos}, ${socio.nombres}`,
-          prestamo.fechaSolicitud,
-          prestamo.fechaDesde,
-          prestamo.fechaHasta,
-          prestamo.motivo,
+          solicitud.fechaSolicitud,
+          solicitud.fechaDesde,
+          solicitud.fechaHasta,
+          solicitud.motivo,
           prestamo.estado,
           prestamo.notaResolucion,
+          prestamo.fechaDevolucion,
         ]),
       );
       break;
