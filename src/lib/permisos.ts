@@ -28,8 +28,13 @@ export const CAPACIDADES = {
   gestionarReuniones: ["admin", "presidente", "secretario"],
   /** Redactar y publicar actas. Leerlas no requiere permiso. */
   gestionarActas: ["admin", "presidente", "secretario"],
-  /** Álbumes, fotos y qué aparece en la portada. */
-  gestionarGaleria: ["admin"],
+  /**
+   * Álbumes, fotos y qué aparece en la portada.
+   *
+   * Era la única parte del sistema sin encargado propio: quien sacaba las
+   * fotos en la salida tenía que pedirle a un administrador que las subiera.
+   */
+  gestionarGaleria: ["admin", "comunicaciones"],
   administrarSistema: ["admin"],
 } as const satisfies Record<string, readonly Rol[]>;
 
@@ -46,6 +51,7 @@ export const ETIQUETAS_ROL: Record<Rol, string> = {
   encargado_equipo: "Encargado de equipos",
   comision_tecnica: "Comisión técnica",
   secretario: "Secretario/a",
+  comunicaciones: "Comunicaciones",
   miembro: "Socio",
 };
 
@@ -57,5 +63,7 @@ export const DESCRIPCIONES_ROL: Record<Rol, string> = {
   encargado_equipo: "Administra el inventario y resuelve las solicitudes de préstamo.",
   comision_tecnica: "Publica y edita las salidas del club.",
   secretario: "Convoca reuniones y redacta las actas.",
+  comunicaciones:
+    "Publica los álbumes de las salidas y elige qué fotos salen en la portada.",
   miembro: "Ve salidas y actas, se inscribe, solicita equipo y consulta sus cuotas.",
 };

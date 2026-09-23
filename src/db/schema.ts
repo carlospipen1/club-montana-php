@@ -24,6 +24,10 @@ export const rolEnum = pgEnum("rol", [
   "encargado_equipo",
   "comision_tecnica",
   "secretario",
+  // Publica los álbumes de las salidas. Hasta la migración 0012 la galería era
+  // lo único que sólo podía tocar un administrador, así que quien sacaba las
+  // fotos tenía que pedirle a alguien más que las subiera.
+  "comunicaciones",
   "miembro",
 ]);
 

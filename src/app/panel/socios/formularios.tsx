@@ -72,6 +72,7 @@ const ROLES = [
   "miembro",
   "encargado_equipo",
   "comision_tecnica",
+  "comunicaciones",
   "secretario",
   "tesorero",
   "presidente",
