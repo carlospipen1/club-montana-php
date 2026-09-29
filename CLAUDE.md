@@ -3,17 +3,6 @@
 El `README.md` explica qué es el sistema y cómo levantarlo. Este archivo es otra
 cosa: lo que hay que saber para **modificarlo sin repetir errores ya cometidos**.
 
-## El entorno de este computador
-
-Ni `node` ni `git` están en el PATH de PowerShell. Antes de cualquier comando:
-
-```powershell
-$env:Path = "C:\Program Files\nodejs;$env:Path"
-```
-
-`git` sí funciona en Git Bash, que trae el suyo. No hay Python instalado: para
-transformar archivos, usar Node o `perl`, no `python`.
-
 ## Convenciones
 
 **Todo en español**: nombres de archivos, funciones, variables, tablas y columnas.
@@ -182,22 +171,6 @@ hace nada, y parece un fallo. Dar 3 o 4 segundos entre acciones.
 
 **La restauración de scroll del navegador** pelea con las pruebas de carruseles.
 `history.scrollRestoration = 'manual'` antes de medir.
-
-**Desde esta conexión no se alcanza `*.vercel.app`.** El DNS entrega
-216.198.79.3 y 64.29.17.3, y a esas dos IP el TCP no llega: timeout y 100% de
-pérdida. La demostración no está caída —por cualquier otra IP anycast de Vercel
-responde 200, y `clubdemontanacollipulli.cl` resuelve a otras—, así que no hay
-que salir a buscar un despliegue roto. Para comprobarlo:
-
-```bash
-curl -o /dev/null -w '%{http_code}' --resolve club-demo-zeta.vercel.app:443:216.198.79.1 https://club-demo-zeta.vercel.app/
-```
-
-Y en Playwright, `args: ["--host-resolver-rules=MAP *.vercel.app 216.198.79.1"]`.
-
-**Un error 500 en producción se lee con `npx vercel logs <host>`.** El navegador
-sólo muestra «This page couldn't load» y un `digest`; el log trae la consulta,
-los parámetros y el código de Postgres.
 
 ## Antes de dar algo por terminado
 
