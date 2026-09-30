@@ -95,6 +95,9 @@ export async function GET(
           "Contacto emergencia",
           "Teléfono emergencia",
           "Relación",
+          "Contacto emergencia 2",
+          "Teléfono emergencia 2",
+          "Relación 2",
         ],
         filas.map((u) => [
           u.id,
@@ -113,6 +116,12 @@ export async function GET(
           u.contactoEmergenciaNombre,
           u.contactoEmergenciaTelefono,
           u.contactoEmergenciaRelacion,
+          u.contactoEmergencia2Nombre,
+          u.contactoEmergencia2Telefono,
+          u.contactoEmergencia2Relacion,
+          // La ficha médica no sale acá. Vive en su propia tabla justamente
+          // para que no se cuele en una exportación que alguien baja para
+          // trabajar las cuotas en una planilla.
         ]),
       );
       break;

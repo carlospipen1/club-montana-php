@@ -4,9 +4,10 @@ import Link from "next/link";
 import { ArrowLeft, Printer } from "lucide-react";
 
 import { db } from "@/db";
-import { inscripciones, salidas, usuarios } from "@/db/schema";
+import { fichasSocio, inscripciones, salidas, usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { formatearFecha, formatearFechaHora } from "@/lib/utils";
+import { textoGrupoSanguineo } from "@/lib/ficha";
 import { DIFICULTAD } from "@/components/ui/datos";
 
 export const metadata = { title: "Nómina de participantes" };
@@ -50,6 +51,10 @@ export default async function PaginaNomina({
 
   if (!salida) notFound();
 
+  // La ficha médica se cruza acá y no se arrastra desde `usuarios`: es su
+  // propia tabla justamente para que leerla sea una decisión, y en esta hoja
+  // lo es —el grupo sanguíneo y las alergias son la mitad de para qué sirve el
+  // papel que queda en Carabineros—.
   const participantes = await db
     .select({
       id: inscripciones.id,
@@ -60,9 +65,13 @@ export default async function PaginaNomina({
       contactoNombre: usuarios.contactoEmergenciaNombre,
       contactoTelefono: usuarios.contactoEmergenciaTelefono,
       contactoRelacion: usuarios.contactoEmergenciaRelacion,
+      grupoSanguineo: fichasSocio.grupoSanguineo,
+      alergias: fichasSocio.alergias,
+      condiciones: fichasSocio.condiciones,
     })
     .from(inscripciones)
     .innerJoin(usuarios, eq(inscripciones.usuarioId, usuarios.id))
+    .leftJoin(fichasSocio, eq(fichasSocio.usuarioId, usuarios.id))
     .where(eq(inscripciones.salidaId, salidaId))
     .orderBy(asc(usuarios.apellidos), asc(usuarios.nombres));
 
@@ -141,6 +150,9 @@ export default async function PaginaNomina({
                 Nombre completo
               </th>
               <th className="border border-stone-400 px-2 py-1.5 font-semibold">RUT</th>
+              <th className="w-16 border border-stone-400 px-1 py-1.5 text-center font-semibold">
+                Sangre
+              </th>
               <th className="border border-stone-400 px-2 py-1.5 font-semibold">
                 Teléfono
               </th>
@@ -160,9 +172,21 @@ export default async function PaginaNomina({
                 </td>
                 <td className="border border-stone-400 px-2 py-2">
                   {p.apellidos}, {p.nombres}
+                  {/* Alergias y condiciones van bajo el nombre y no en su
+                      propia columna: en una hoja tamaño carta una columna más
+                      deja el texto ilegible, y esto es lo primero que alguien
+                      necesita leer si tiene que atender a esta persona. */}
+                  {(p.alergias || p.condiciones) && (
+                    <p className="mt-0.5 text-[10px] leading-tight text-stone-700">
+                      {[p.alergias, p.condiciones].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
                 </td>
                 <td className="border border-stone-400 px-2 py-2">
                   <Dato valor={p.rut} />
+                </td>
+                <td className="border border-stone-400 px-1 py-2 text-center font-medium">
+                  <Dato valor={textoGrupoSanguineo(p.grupoSanguineo)} />
                 </td>
                 <td className="border border-stone-400 px-2 py-2">
                   <Dato valor={p.telefono} />
@@ -191,6 +215,7 @@ export default async function PaginaNomina({
                 </td>
                 <td className="border border-stone-400 px-2 py-2">&nbsp;</td>
                 <td className="border border-stone-400 px-2 py-2">&nbsp;</td>
+                <td className="border border-stone-400 px-1 py-2">&nbsp;</td>
                 <td className="border border-stone-400 px-2 py-2">&nbsp;</td>
                 <td className="border border-stone-400 px-2 py-2">&nbsp;</td>
                 <td className="border border-stone-400 px-2 py-2">&nbsp;</td>

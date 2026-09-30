@@ -7,10 +7,11 @@ import {
   accionMarcarAsistencia,
 } from "@/actions/salidas";
 import { db } from "@/db";
-import { inscripciones, salidas, usuarios } from "@/db/schema";
+import { fichasSocio, inscripciones, salidas, usuarios } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
 import { formatearFechaHora } from "@/lib/utils";
+import { textoGrupoSanguineo } from "@/lib/ficha";
 import { ConfirmarEnvio } from "@/components/ui/acciones";
 import { Boton, BotonEnlace } from "@/components/ui/boton";
 import { Selector } from "@/components/ui/campos";
@@ -51,6 +52,11 @@ export default async function PaginaSalidas() {
 
   // Los participantes se traen de una sola vez y se agrupan en memoria, en vez
   // de hacer una consulta por salida dentro del bucle de render.
+  // La parte médica sólo se trae si esta persona puede verla. No es que se
+  // esconda en la pantalla: si no tiene la capacidad, los datos no salen de la
+  // base. Es la diferencia entre un botón oculto y un dato que no se leyó.
+  const puedeVerFicha = puede(usuario.rol, "verFichaMedica");
+
   const participantes = puedeGestionar
     ? await db
         .select({
@@ -62,9 +68,14 @@ export default async function PaginaSalidas() {
           telefono: usuarios.telefono,
           contactoNombre: usuarios.contactoEmergenciaNombre,
           contactoTelefono: usuarios.contactoEmergenciaTelefono,
+          grupoSanguineo: puedeVerFicha ? fichasSocio.grupoSanguineo : sql<null>`null`,
+          alergias: puedeVerFicha ? fichasSocio.alergias : sql<null>`null`,
+          condiciones: puedeVerFicha ? fichasSocio.condiciones : sql<null>`null`,
+          medicamentos: puedeVerFicha ? fichasSocio.medicamentos : sql<null>`null`,
         })
         .from(inscripciones)
         .innerJoin(usuarios, eq(inscripciones.usuarioId, usuarios.id))
+        .leftJoin(fichasSocio, eq(fichasSocio.usuarioId, usuarios.id))
         .orderBy(asc(usuarios.apellidos))
     : [];
 
@@ -246,6 +257,24 @@ export default async function PaginaSalidas() {
                           <span className="block text-stone-500">
                             Emergencia: {p.contactoNombre}
                             {p.contactoTelefono ? ` · ${p.contactoTelefono}` : ""}
+                          </span>
+                        )}
+                        {/* Lo médico, para quien va a dirigir la salida. Va en
+                            rojo y no en gris porque no es un dato más de la
+                            ficha: es lo que hay que saber antes de partir. */}
+                        {(p.grupoSanguineo ||
+                          p.alergias ||
+                          p.condiciones ||
+                          p.medicamentos) && (
+                          <span className="mt-0.5 block text-red-800">
+                            {[
+                              textoGrupoSanguineo(p.grupoSanguineo),
+                              p.alergias && `Alergias: ${p.alergias}`,
+                              p.condiciones,
+                              p.medicamentos && `Toma: ${p.medicamentos}`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
                           </span>
                         )}
                       </div>

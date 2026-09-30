@@ -11,6 +11,19 @@ import type { Rol } from "@/db/schema";
 export const CAPACIDADES = {
   /** El registro de socios trae datos personales y de emergencia. */
   verSocios: ["admin"],
+  /**
+   * La parte médica de la ficha: grupo sanguíneo, alergias, condiciones,
+   * medicamentos.
+   *
+   * Es una capacidad aparte de `verSocios` porque responde a otra necesidad:
+   * quien lleva un grupo a la montaña tiene que saber si alguien es alérgico o
+   * usa insulina, y eso no lo convierte en administrador del registro. Al
+   * revés, tampoco: tener la lista de socios no debería traer los datos de
+   * salud de regalo.
+   *
+   * Cada socio ve y edita siempre la suya, sin pasar por acá.
+   */
+  verFichaMedica: ["admin", "comision_tecnica"],
   gestionarSocios: ["admin"],
   gestionarCuotas: ["admin", "tesorero"],
   /** Alta, edición y baja del inventario. Pedir prestado no requiere permiso. */

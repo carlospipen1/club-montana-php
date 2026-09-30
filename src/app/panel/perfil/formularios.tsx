@@ -88,6 +88,65 @@ export function FormularioContacto({ usuario }: { usuario: Usuario }) {
             />
           </Campo>
         </div>
+
+        {/* Con un solo contacto basta que no conteste para que no haya a quién
+            llamar. El segundo es opcional, pero conviene que sea alguien que
+            no viva con el primero. */}
+        <div className="grid gap-4 border-t border-amber-200 pt-4 sm:grid-cols-2">
+          <p className="text-xs font-medium text-amber-900 sm:col-span-2">
+            Un segundo contacto, por si el primero no contesta
+          </p>
+
+          <Campo
+            id="contacto2Nombre"
+            etiqueta="Nombre"
+            className="sm:col-span-2"
+            error={estado.errores?.contacto2Nombre?.[0]}
+          >
+            <Input
+              id="contacto2Nombre"
+              name="contacto2Nombre"
+              defaultValue={
+                estado.valores?.contacto2Nombre ??
+                usuario.contactoEmergencia2Nombre ??
+                ""
+              }
+            />
+          </Campo>
+
+          <Campo
+            id="contacto2Telefono"
+            etiqueta="Teléfono"
+            error={estado.errores?.contacto2Telefono?.[0]}
+          >
+            <Input
+              id="contacto2Telefono"
+              name="contacto2Telefono"
+              type="tel"
+              defaultValue={
+                estado.valores?.contacto2Telefono ??
+                usuario.contactoEmergencia2Telefono ??
+                ""
+              }
+            />
+          </Campo>
+
+          <Campo
+            id="contacto2Relacion"
+            etiqueta="Relación"
+            error={estado.errores?.contacto2Relacion?.[0]}
+          >
+            <Input
+              id="contacto2Relacion"
+              name="contacto2Relacion"
+              defaultValue={
+                estado.valores?.contacto2Relacion ??
+                usuario.contactoEmergencia2Relacion ??
+                ""
+              }
+            />
+          </Campo>
+        </div>
       </fieldset>
 
       <div className="flex justify-end">

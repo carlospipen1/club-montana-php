@@ -92,6 +92,21 @@ Al pedir y al aprobar se hace `select ... for update` sobre los equipos
 involucrados *antes* de buscar choques. Sin eso, dos operaciones simultáneas
 pasaban las dos: cada una leía antes de que la otra escribiera.
 
+**Los datos de salud viven en `fichas_socio`, no en `usuarios`.** Podrían haber
+sido columnas más, pero en `usuarios` cualquier `select` los arrastra sin que
+nadie lo decida: el exportador de socios, que baja la fila entera, habría
+empezado a incluir alergias y medicamentos sin que nadie lo pidiera. En su
+propia tabla, leerlos es siempre ir a buscarlos. Los contactos de emergencia
+—que no son dato de salud y la nómina ya imprime— se quedaron en `usuarios`.
+
+La escribe cada socio en su perfil y nadie más: que un tercero transcriba datos
+médicos desde un papel abre la puerta a un error que nadie nota hasta que
+importa. Para leerla está `verFichaMedica` (admin y comisión técnica), separada
+de `verSocios` porque son necesidades distintas: quien lleva un grupo al cerro
+tiene que saber quién es alérgico, y eso no lo hace administrador del registro.
+Todos los campos son opcionales: una ficha a medio llenar sirve más que una en
+blanco.
+
 **Las fotos se marcan, no se duplican.** Una foto pertenece a un álbum y tres
 banderas deciden dónde sale: portada del sitio (una en todo el sistema), en el
 carrusel (hasta 12) y portada del álbum.

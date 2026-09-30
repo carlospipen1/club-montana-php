@@ -13,6 +13,7 @@ import {
 import { db } from "@/db";
 import {
   cuotasMensuales,
+  fichasSocio,
   notificaciones,
   prestamos,
   reuniones,
@@ -20,8 +21,15 @@ import {
   solicitudesPrestamo,
 } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
-import { formatearCLP, formatearFecha, MESES, tiempoRelativo } from "@/lib/utils";
+import {
+  formatearCLP,
+  formatearFecha,
+  listarEnEspanol,
+  MESES,
+  tiempoRelativo,
+} from "@/lib/utils";
 import { ETIQUETAS_TIPO_REUNION, formatearCuando } from "@/lib/reuniones";
+import { loQueFaltaEnLaFicha } from "@/lib/ficha";
 import { BotonEnlace } from "@/components/ui/boton";
 import { Aviso } from "@/components/ui/avisos";
 import { DIFICULTAD, InsigniaEstado } from "@/components/ui/datos";
@@ -46,6 +54,7 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
     misCuotas,
     misPrestamos,
     ultimasNotificaciones,
+    [miFicha],
   ] = await Promise.all([
     // Las reuniones convocadas van arriba de todo: es lo que el club necesita
     // que nadie se pierda, y a diferencia de una salida no se puede recuperar
@@ -128,6 +137,12 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
       .where(eq(notificaciones.usuarioId, usuario.id))
       .orderBy(desc(notificaciones.creadoEn))
       .limit(5),
+
+    db
+      .select({ grupoSanguineo: fichasSocio.grupoSanguineo })
+      .from(fichasSocio)
+      .where(eq(fichasSocio.usuarioId, usuario.id))
+      .limit(1),
   ]);
 
   const cuotasPendientes = misCuotas.filter((c) => c.montoPagado < c.montoEsperado);
@@ -136,6 +151,10 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
     0,
   );
   const prestamosActivos = misPrestamos[0]?.total ?? 0;
+  const faltaEnLaFicha = loQueFaltaEnLaFicha(
+    miFicha,
+    usuario.contactoEmergenciaNombre,
+  );
   const noLeidas = ultimasNotificaciones.filter((n) => !n.leida).length;
 
   return (
@@ -148,6 +167,21 @@ export default async function PaginaPanel({ searchParams }: PageProps<"/panel">)
       {error === "sin-permiso" && (
         <Aviso tono="atencion" titulo="No tienes acceso a esa sección">
           Si crees que deberías tenerlo, pídeselo a la directiva.
+        </Aviso>
+      )}
+
+      {/* Sólo a los socios: una cuenta administrativa no sube a ningún cerro.
+          Y sólo por lo que de verdad hace falta en un accidente —el grupo
+          sanguíneo y a quién llamar—, no por la ficha entera: recordarle a
+          alguien que no puso el número de su póliza es ruido. */}
+      {usuario.esSocio && faltaEnLaFicha.length > 0 && (
+        <Aviso tono="atencion" titulo="Te falta completar tu ficha">
+          No tenemos {listarEnEspanol(faltaEnLaFicha)}. Es lo que mira quien dirige
+          una salida si algo pasa en el cerro.{" "}
+          <Link href="/panel/perfil" className="font-medium underline">
+            Complétala ahora
+          </Link>
+          .
         </Aviso>
       )}
 

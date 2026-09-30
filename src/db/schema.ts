@@ -48,6 +48,27 @@ export const estadoReunionEnum = pgEnum("estado_reunion", [
 export const estadoAlbumEnum = pgEnum("estado_album", ["borrador", "publicado"]);
 
 export const tipoMiembroEnum = pgEnum("tipo_miembro", ["general", "estudiante"]);
+
+/**
+ * Grupo sanguíneo.
+ *
+ * "No lo sé" es un valor y no la ausencia del dato, porque son dos cosas
+ * distintas: quien nunca abrió su ficha y quien la llenó y de verdad no lo
+ * sabe. Al segundo no hay que seguir recordándole que la complete.
+ */
+export const grupoSanguineoEnum = pgEnum("grupo_sanguineo", [
+  "A+",
+  "A-",
+  "B+",
+  "B-",
+  "AB+",
+  "AB-",
+  "O+",
+  "O-",
+  "no_sabe",
+]);
+
+export const previsionEnum = pgEnum("prevision", ["fonasa", "isapre", "otra"]);
 export const estadoUsuarioEnum = pgEnum("estado_usuario", ["activo", "inactivo"]);
 
 /**
@@ -132,6 +153,22 @@ export const usuarios = pgTable(
     contactoEmergenciaNombre: varchar("contacto_emergencia_nombre", { length: 120 }),
     contactoEmergenciaTelefono: varchar("contacto_emergencia_telefono", { length: 30 }),
     contactoEmergenciaRelacion: varchar("contacto_emergencia_relacion", { length: 60 }),
+
+    /**
+     * Un segundo contacto, porque con uno solo basta que no conteste para que
+     * no haya a quién llamar.
+     *
+     * Los contactos viven acá y no en `fichas_socio` a propósito: no son un
+     * dato de salud, la nómina de las salidas ya los imprime, y separarlos
+     * obligaría a cruzar dos tablas para algo que siempre se mira junto.
+     */
+    contactoEmergencia2Nombre: varchar("contacto_emergencia2_nombre", { length: 120 }),
+    contactoEmergencia2Telefono: varchar("contacto_emergencia2_telefono", {
+      length: 30,
+    }),
+    contactoEmergencia2Relacion: varchar("contacto_emergencia2_relacion", {
+      length: 60,
+    }),
 
     tipoMiembro: tipoMiembroEnum("tipo_miembro").notNull().default("general"),
     rol: rolEnum("rol").notNull().default("miembro"),
@@ -595,6 +632,79 @@ export const notificaciones = pgTable(
 );
 
 /* -------------------------------------------------------------------------- */
+/*  Ficha del socio                                                            */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Los datos de salud, en su propia tabla.
+ *
+ * Podrían haber sido columnas más en `usuarios`, y habría sido más corto. Van
+ * aparte por una razón concreta: en `usuarios` cualquier `select` los arrastra
+ * sin que nadie lo haya decidido, y el exportador de socios —que hoy baja un
+ * CSV con toda la fila— habría empezado a incluir alergias y medicamentos sin
+ * que nadie lo pidiera. Acá leerlos es siempre ir a buscarlos.
+ *
+ * Todo es opcional. Una ficha se completa de a poco, y una a medio llenar sirve
+ * más que una en blanco: el grupo sanguíneo solo ya vale el viaje.
+ *
+ * La llave primaria es el id del socio: una ficha por persona, sin forma de que
+ * existan dos.
+ */
+export const fichasSocio = pgTable("fichas_socio", {
+  usuarioId: integer("usuario_id")
+    .primaryKey()
+    .references(() => usuarios.id, { onDelete: "cascade" }),
+
+  grupoSanguineo: grupoSanguineoEnum("grupo_sanguineo"),
+  alergias: text("alergias"),
+  condiciones: text("condiciones"),
+  medicamentos: text("medicamentos"),
+
+  prevision: previsionEnum("prevision"),
+  /** Cuál isapre, o cuál otra. Con Fonasa no hace falta. */
+  previsionDetalle: varchar("prevision_detalle", { length: 80 }),
+
+  /** Seguro de rescate o asistencia en montaña. */
+  seguroCompania: varchar("seguro_compania", { length: 120 }),
+  seguroPoliza: varchar("seguro_poliza", { length: 60 }),
+
+  /** Para saber si lo que se está leyendo sigue siendo cierto. */
+  actualizadaEn: timestamp("actualizada_en", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * Cursos y certificaciones, con su vencimiento.
+ *
+ * Es una tabla y no un campo de texto porque la fecha importa: un curso de
+ * primeros auxilios vencido no es lo mismo que uno vigente, y esa diferencia
+ * hay que poder consultarla, no leerla entre líneas.
+ *
+ * El nombre es libre y no una lista cerrada: los cursos de montaña cambian de
+ * nombre y de institución, y una lista fija obligaría a una migración cada vez
+ * que alguien tome uno nuevo. El formulario sugiere los habituales.
+ */
+export const certificaciones = pgTable(
+  "certificaciones",
+  {
+    id: serial("id").primaryKey(),
+    usuarioId: integer("usuario_id")
+      .notNull()
+      .references(() => usuarios.id, { onDelete: "cascade" }),
+
+    nombre: varchar("nombre", { length: 140 }).notNull(),
+    institucion: varchar("institucion", { length: 140 }),
+    fechaObtencion: date("fecha_obtencion"),
+    /** Nulo significa que no vence, no que se desconozca. */
+    fechaVencimiento: date("fecha_vencimiento"),
+
+    creadoEn: timestamp("creado_en", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("certificaciones_usuario_idx").on(t.usuarioId)],
+);
+
+/* -------------------------------------------------------------------------- */
 /*  Recuperación de contraseña                                                 */
 /* -------------------------------------------------------------------------- */
 
@@ -631,7 +741,23 @@ export const tokensRecuperacion = pgTable(
 /*  Relaciones                                                                 */
 /* -------------------------------------------------------------------------- */
 
-export const usuariosRelations = relations(usuarios, ({ many }) => ({
+export const fichasSocioRelations = relations(fichasSocio, ({ one }) => ({
+  usuario: one(usuarios, {
+    fields: [fichasSocio.usuarioId],
+    references: [usuarios.id],
+  }),
+}));
+
+export const certificacionesRelations = relations(certificaciones, ({ one }) => ({
+  usuario: one(usuarios, {
+    fields: [certificaciones.usuarioId],
+    references: [usuarios.id],
+  }),
+}));
+
+export const usuariosRelations = relations(usuarios, ({ one, many }) => ({
+  ficha: one(fichasSocio),
+  certificaciones: many(certificaciones),
   solicitudesPrestamo: many(solicitudesPrestamo),
   inscripciones: many(inscripciones),
   cuotas: many(cuotasMensuales),
@@ -700,6 +826,8 @@ export const cuotasMensualesRelations = relations(cuotasMensuales, ({ one }) => 
 /* -------------------------------------------------------------------------- */
 
 export type Usuario = typeof usuarios.$inferSelect;
+export type FichaSocio = typeof fichasSocio.$inferSelect;
+export type Certificacion = typeof certificaciones.$inferSelect;
 export type NuevoUsuario = typeof usuarios.$inferInsert;
 export type Equipo = typeof equipos.$inferSelect;
 export type SolicitudPrestamo = typeof solicitudesPrestamo.$inferSelect;

@@ -5,9 +5,11 @@ import { db } from "./index";
 import {
   actas,
   asistencias,
+  certificaciones,
   cuotasAnuales,
   cuotasMensuales,
   equipos,
+  fichasSocio,
   inscripciones,
   prestamos,
   reuniones,
@@ -53,7 +55,8 @@ export async function sembrarDemo(): Promise<void> {
       notificaciones, fotos, albumes, actas,
       cuotas_mensuales, cuotas_anuales,
       asistencias, reuniones,
-      inscripciones, salidas, prestamos, solicitudes_prestamo, equipos, usuarios
+      inscripciones, salidas, prestamos, solicitudes_prestamo, equipos,
+      certificaciones, fichas_socio, usuarios
     restart identity cascade
   `);
 
@@ -94,6 +97,60 @@ export async function sembrarDemo(): Promise<void> {
       estado: "activo" as const,
     })),
   );
+
+  /* --- Fichas y cursos ---------------------------------------------------- */
+
+  // A propósito no todos tienen ficha, y ninguna está completa: así se ve lo
+  // que de verdad va a pasar en el club —gente que la llenó a medias y gente
+  // que todavía no la abre— y no una demostración donde todo está perfecto.
+  await db.insert(fichasSocio).values([
+    {
+      usuarioId: 3,
+      grupoSanguineo: "O+",
+      alergias: "Penicilina.",
+      prevision: "fonasa",
+    },
+    {
+      usuarioId: 4,
+      grupoSanguineo: "A-",
+      condiciones: "Asma leve, usa inhalador en esfuerzo.",
+      medicamentos: "Salbutamol de rescate.",
+      prevision: "isapre",
+      previsionDetalle: "Consalud",
+      seguroCompania: "Assist Card",
+      seguroPoliza: "AC-884120",
+    },
+    { usuarioId: 7, grupoSanguineo: "no_sabe" },
+    {
+      usuarioId: 8,
+      grupoSanguineo: "B+",
+      alergias: "Picadura de abeja: reacción fuerte, lleva adrenalina.",
+    },
+  ]);
+
+  await db.insert(certificaciones).values([
+    {
+      usuarioId: 4,
+      nombre: "WFR · Wilderness First Responder",
+      institucion: "ANDESCUELA",
+      fechaObtencion: "2024-11-10",
+      fechaVencimiento: "2027-11-10",
+    },
+    {
+      usuarioId: 4,
+      nombre: "Seguridad en avalanchas nivel 1",
+      institucion: "AIARE",
+      fechaObtencion: "2023-08-02",
+    },
+    {
+      usuarioId: 3,
+      nombre: "Primeros auxilios básicos",
+      institucion: "Cruz Roja",
+      fechaObtencion: "2023-05-20",
+      // Vencido a propósito: es el caso que el listado tiene que saber marcar.
+      fechaVencimiento: "2025-05-20",
+    },
+  ]);
 
   /* --- Equipos y préstamos ------------------------------------------------ */
 

@@ -1,14 +1,35 @@
+import { asc, eq } from "drizzle-orm";
+
+import { db } from "@/db";
+import { certificaciones, fichasSocio } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { ETIQUETAS_ROL } from "@/lib/permisos";
 import { calcularEdad, formatearFecha } from "@/lib/utils";
 import { Insignia } from "@/components/ui/datos";
 import { CabeceraPagina, Tarjeta, TarjetaCabecera } from "@/components/ui/superficie";
 import { FormularioContacto, FormularioPassword } from "./formularios";
+import { Certificaciones, FormularioFicha } from "./ficha";
 
 export const metadata = { title: "Mi perfil" };
 
 export default async function PaginaPerfil() {
   const usuario = await requerirUsuario();
+
+  // La ficha puede no existir todavía: se crea sola la primera vez que se
+  // guarda, así que acá simplemente no hay fila.
+  const [[ficha], cursos] = await Promise.all([
+    db
+      .select()
+      .from(fichasSocio)
+      .where(eq(fichasSocio.usuarioId, usuario.id))
+      .limit(1),
+    db
+      .select()
+      .from(certificaciones)
+      .where(eq(certificaciones.usuarioId, usuario.id))
+      // Lo que vence primero, primero: es lo que hay que renovar.
+      .orderBy(asc(certificaciones.fechaVencimiento), asc(certificaciones.nombre)),
+  ]);
 
   const datos = [
     { etiqueta: "Nombre", valor: `${usuario.nombres} ${usuario.apellidos}` },
@@ -69,6 +90,22 @@ export default async function PaginaPerfil() {
           <FormularioPassword temporal={usuario.debeCambiarPassword} />
         </Tarjeta>
       </div>
+
+      <Tarjeta>
+        <TarjetaCabecera
+          titulo="Ficha médica"
+          descripcion="La ven la directiva y quien dirige una salida, para saber qué hacer si algo pasa. Nadie más."
+        />
+        <FormularioFicha ficha={ficha ?? null} />
+      </Tarjeta>
+
+      <Tarjeta>
+        <TarjetaCabecera
+          titulo="Cursos y certificaciones"
+          descripcion="Primeros auxilios, autorrescate, avalanchas. Con su fecha de vencimiento."
+        />
+        <Certificaciones lista={cursos} />
+      </Tarjeta>
     </>
   );
 }

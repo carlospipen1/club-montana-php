@@ -146,3 +146,14 @@ export function calcularEdad(fechaNacimiento: string | null): number | null {
 
   return edad >= 0 && edad < 130 ? edad : null;
 }
+
+/**
+ * Une una lista como se dice en voz alta: "la carpa, el saco y las cintas".
+ *
+ * Con `join(", ")` queda "la carpa, el saco, las cintas", que se lee como una
+ * enumeración de formulario y no como una frase.
+ */
+export function listarEnEspanol(partes: string[]): string {
+  if (partes.length <= 1) return partes[0] ?? "";
+  return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
+}

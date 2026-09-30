@@ -14,6 +14,9 @@ const esquemaPerfil = z.object({
   contactoNombre: z.string().trim().max(120).optional(),
   contactoTelefono: z.string().trim().max(30).optional(),
   contactoRelacion: z.string().trim().max(60).optional(),
+  contacto2Nombre: z.string().trim().max(120).optional(),
+  contacto2Telefono: z.string().trim().max(30).optional(),
+  contacto2Relacion: z.string().trim().max(60).optional(),
 });
 
 /**
@@ -39,6 +42,9 @@ export async function accionActualizarPerfil(
       contactoEmergenciaNombre: d.contactoNombre || null,
       contactoEmergenciaTelefono: d.contactoTelefono || null,
       contactoEmergenciaRelacion: d.contactoRelacion || null,
+      contactoEmergencia2Nombre: d.contacto2Nombre || null,
+      contactoEmergencia2Telefono: d.contacto2Telefono || null,
+      contactoEmergencia2Relacion: d.contacto2Relacion || null,
     })
     .where(eq(usuarios.id, usuario.id));
 

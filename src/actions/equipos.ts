@@ -14,7 +14,7 @@ import {
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
 import { CATEGORIAS_EQUIPO } from "@/lib/equipos";
 import { notificarA, notificarAQuienesPueden } from "@/lib/notificar";
-import { formatearFecha, hoyISO } from "@/lib/utils";
+import { formatearFecha, hoyISO, listarEnEspanol as listar } from "@/lib/utils";
 import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
 
 /* -------------------------------------------------------------------------- */
@@ -107,12 +107,6 @@ export async function accionEliminarEquipo(formData: FormData) {
 /* -------------------------------------------------------------------------- */
 /*  Solicitud de préstamo                                                      */
 /* -------------------------------------------------------------------------- */
-
-/** "la carpa", "la carpa y el saco", "la carpa, el saco y las cintas". */
-function listar(nombres: string[]): string {
-  if (nombres.length <= 1) return nombres[0] ?? "";
-  return `${nombres.slice(0, -1).join(", ")} y ${nombres[nombres.length - 1]}`;
-}
 
 const esquemaSolicitud = z
   .object({
