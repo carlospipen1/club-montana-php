@@ -114,7 +114,12 @@ const esquemaSolicitud = z
     equipoIds: z
       .array(z.coerce.number().int().positive())
       .min(1, "Marca al menos un equipo antes de enviar el pedido.")
-      .max(30, "Son demasiados equipos para un solo pedido."),
+      // El tope existe para que un formulario descontrolado no escriba mil
+      // filas, no para decirle al club cuánto puede pedir. Estaba en 30 y un
+      // taller práctico necesita la mitad del inventario de una vez, así que
+      // frenaba justo el caso que más sentido tiene. Va holgadamente por
+      // encima de lo que el club tiene hoy.
+      .max(150, "Son demasiados equipos para un solo pedido."),
     fechaDesde: z.string().min(1, "Indica desde cuándo lo necesitas."),
     fechaHasta: z.string().min(1, "Indica hasta cuándo lo necesitas."),
     motivo: z.string().trim().min(5, "Cuenta brevemente para qué lo necesitas."),

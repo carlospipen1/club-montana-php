@@ -1,9 +1,9 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, gte } from "drizzle-orm";
 import { Backpack, Search, Trash2 } from "lucide-react";
 
 import { accionEliminarEquipo } from "@/actions/equipos";
 import { db } from "@/db";
-import { equipos, prestamos, solicitudesPrestamo } from "@/db/schema";
+import { equipos, prestamos, solicitudesPrestamo, usuarios } from "@/db/schema";
 import { requerirUsuario } from "@/lib/auth";
 import { puede } from "@/lib/permisos";
 import { formatearFecha, hoyISO } from "@/lib/utils";
@@ -30,6 +30,9 @@ import {
 } from "@/components/panel/lista-filtrable";
 
 export const metadata = { title: "Equipos" };
+
+/** Un pedido pendiente de alguien sobre un equipo, con quién y para cuándo. */
+type Pedido = { mio: boolean; quien: string; desde: string; hasta: string };
 
 export default async function PaginaEquipos() {
   const usuario = await requerirUsuario();
@@ -69,6 +72,40 @@ export default async function PaginaEquipos() {
     if (!compromiso.has(c.equipoId)) {
       compromiso.set(c.equipoId, { desde: c.desde, hasta: c.hasta });
     }
+  }
+
+  // Lo que otros ya pidieron y nadie ha respondido todavía.
+  //
+  // Un pedido pendiente no reserva nada —a quién se le presta lo decide quien
+  // lleva los equipos—, pero quien está armando el suyo necesita verlo: si la
+  // carpa ya se la pidió alguien para el mismo fin de semana, lo razonable es
+  // hablarlo antes y no que los dos se enteren cuando el encargado tenga que
+  // elegir. Es la diferencia entre coordinarse y toparse.
+  const pedidosPendientes = await db
+    .select({
+      equipoId: prestamos.equipoId,
+      usuarioId: solicitudesPrestamo.usuarioId,
+      desde: solicitudesPrestamo.fechaDesde,
+      hasta: solicitudesPrestamo.fechaHasta,
+      nombres: usuarios.nombres,
+      apellidos: usuarios.apellidos,
+    })
+    .from(prestamos)
+    .innerJoin(solicitudesPrestamo, eq(prestamos.solicitudId, solicitudesPrestamo.id))
+    .innerJoin(usuarios, eq(solicitudesPrestamo.usuarioId, usuarios.id))
+    .where(and(eq(prestamos.estado, "pendiente"), gte(solicitudesPrestamo.fechaHasta, hoy)))
+    .orderBy(asc(solicitudesPrestamo.fechaDesde));
+
+  const pendientesPorEquipo = new Map<number, Pedido[]>();
+  for (const p of pedidosPendientes) {
+    const lista = pendientesPorEquipo.get(p.equipoId) ?? [];
+    lista.push({
+      mio: p.usuarioId === usuario.id,
+      quien: `${p.nombres} ${p.apellidos}`,
+      desde: p.desde,
+      hasta: p.hasta,
+    });
+    pendientesPorEquipo.set(p.equipoId, lista);
   }
 
   const libresHoy = lista.filter((e) => {
@@ -159,6 +196,7 @@ export default async function PaginaEquipos() {
                           compromiso={compromiso.get(equipo.id)}
                           hoy={hoy}
                         />
+                        <YaLoPidieron pedidos={pendientesPorEquipo.get(equipo.id)} />
                       </Td>
                       <Td className="whitespace-nowrap">
                         {formatearFecha(equipo.fechaAdquisicion)}
@@ -252,5 +290,56 @@ function Disponibilidad({
       Comprometido del {formatearFecha(compromiso.desde)} al{" "}
       {formatearFecha(compromiso.hasta)}
     </Insignia>
+  );
+}
+
+/**
+ * Quién más tiene un pedido pendiente sobre este equipo.
+ *
+ * No bloquea nada: pedir lo mismo que otro está permitido y lo resuelve quien
+ * lleva los equipos. Lo que esto evita es que dos personas se enteren recién
+ * cuando el encargado tiene que elegir entre las dos. Con la fecha a la vista,
+ * la conversación ocurre antes —o uno corre su salida un fin de semana—.
+ *
+ * El propio pedido se marca distinto: lo que hay que decirle a alguien que ya
+ * pidió algo no es "otro lo pidió", es "ya lo pediste, no lo pidas de nuevo".
+ */
+function YaLoPidieron({ pedidos }: { pedidos?: Pedido[] }) {
+  if (!pedidos || pedidos.length === 0) return null;
+
+  const mio = pedidos.find((p) => p.mio);
+  const ajenos = pedidos.filter((p) => !p.mio);
+
+  return (
+    <div className="mt-1 space-y-0.5">
+      {/* Una insignia y no sólo una línea de texto: en una tabla de ochenta
+          filas lo que se recorre con la vista son las marcas de color, y esto
+          es tan parte del estado del equipo como que esté prestado. */}
+      <Insignia tono="atencion">
+        {ajenos.length === 0
+          ? "Ya lo solicitaste"
+          : pedidos.length === 1
+            ? "Ya solicitado"
+            : `Solicitado por ${pedidos.length}`}
+      </Insignia>
+
+      {mio && (
+        <p className="text-xs text-stone-500">
+          Ya lo pediste para el {formatearFecha(mio.desde)} → {formatearFecha(mio.hasta)}
+        </p>
+      )}
+
+      {/* Dos y el resto contado: en una tabla, una lista de cinco nombres deja
+          de leerse y empuja las demás columnas. */}
+      {ajenos.slice(0, 2).map((p, i) => (
+        <p key={i} className="text-xs text-amber-700">
+          {p.quien} lo pidió para el {formatearFecha(p.desde)} →{" "}
+          {formatearFecha(p.hasta)}
+        </p>
+      ))}
+      {ajenos.length > 2 && (
+        <p className="text-xs text-amber-700">y {ajenos.length - 2} socio(s) más.</p>
+      )}
+    </div>
   );
 }
