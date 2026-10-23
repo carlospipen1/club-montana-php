@@ -20,7 +20,12 @@ import {
 } from "@/components/ui/datos";
 import { CabeceraPagina, Tarjeta, Vacio } from "@/components/ui/superficie";
 import { EditarEquipo, NuevoEquipo } from "./formularios";
-import { BarraPedido, CasillaEquipo, ProveedorPedido } from "./pedido";
+import {
+  BarraPedido,
+  CasillaEquipo,
+  ProveedorPedido,
+  type PedidoPendiente,
+} from "./pedido";
 import {
   BuscadorLista,
   FilaLista,
@@ -30,9 +35,6 @@ import {
 } from "@/components/panel/lista-filtrable";
 
 export const metadata = { title: "Equipos" };
-
-/** Un pedido pendiente de alguien sobre un equipo, con quién y para cuándo. */
-type Pedido = { mio: boolean; quien: string; desde: string; hasta: string };
 
 export default async function PaginaEquipos() {
   const usuario = await requerirUsuario();
@@ -96,7 +98,7 @@ export default async function PaginaEquipos() {
     .where(and(eq(prestamos.estado, "pendiente"), gte(solicitudesPrestamo.fechaHasta, hoy)))
     .orderBy(asc(solicitudesPrestamo.fechaDesde));
 
-  const pendientesPorEquipo = new Map<number, Pedido[]>();
+  const pendientesPorEquipo = new Map<number, PedidoPendiente[]>();
   for (const p of pedidosPendientes) {
     const lista = pendientesPorEquipo.get(p.equipoId) ?? [];
     lista.push({
@@ -241,7 +243,7 @@ export default async function PaginaEquipos() {
           <Paginador nombre="equipos" />
         </Tarjeta>
 
-        <BarraPedido />
+        <BarraPedido pendientes={Object.fromEntries(pendientesPorEquipo)} />
       </ProveedorLista>
     </ProveedorPedido>
   );
@@ -304,7 +306,7 @@ function Disponibilidad({
  * El propio pedido se marca distinto: lo que hay que decirle a alguien que ya
  * pidió algo no es "otro lo pidió", es "ya lo pediste, no lo pidas de nuevo".
  */
-function YaLoPidieron({ pedidos }: { pedidos?: Pedido[] }) {
+function YaLoPidieron({ pedidos }: { pedidos?: PedidoPendiente[] }) {
   if (!pedidos || pedidos.length === 0) return null;
 
   const mio = pedidos.find((p) => p.mio);

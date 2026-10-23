@@ -9,7 +9,7 @@ import { useModalAccion } from "@/components/ui/usar-modal-accion";
 import { Aviso } from "@/components/ui/avisos";
 import { Boton } from "@/components/ui/boton";
 import { AreaTexto, Campo, Input } from "@/components/ui/campos";
-import { hoyISO } from "@/lib/utils";
+import { formatearFecha, hoyISO } from "@/lib/utils";
 
 /**
  * El carro del pedido de equipo.
@@ -27,6 +27,14 @@ import { hoyISO } from "@/lib/utils";
  * mandarlas al navegador—: acá adentro sólo viven la casilla de cada fila y la
  * barra de abajo, que son las dos piezas que necesitan estado.
  */
+
+/** Un pedido pendiente de alguien sobre un equipo, con quién y para cuándo. */
+export type PedidoPendiente = {
+  mio: boolean;
+  quien: string;
+  desde: string;
+  hasta: string;
+};
 
 type Elegido = { id: number; nombre: string };
 
@@ -100,16 +108,40 @@ export function CasillaEquipo({
  * Queda fija sobre el borde inferior porque la lista es larga: si el botón
  * estuviera al final de la tabla, habría que bajar 82 filas para llegar a él.
  */
-export function BarraPedido() {
+export function BarraPedido({
+  pendientes,
+}: {
+  /** Lo que ya pidió alguien y nadie ha respondido, por equipo. */
+  pendientes: Record<number, PedidoPendiente[]>;
+}) {
   const { elegidos, quitar, limpiar } = usePedido();
   const { abierto, abrir, cerrar, estado, accion } = useModalAccion(
     accionSolicitarPrestamo,
     { cerrarAlExito: false },
   );
 
+  const [desde, setDesde] = useState<string>(hoyISO());
+  const [hasta, setHasta] = useState<string>("");
+
   if (elegidos.length === 0) return null;
 
   const cuantos = elegidos.length;
+
+  // Qué de lo marcado ya lo pidió alguien para fechas que se cruzan con las
+  // que esta persona está eligiendo.
+  //
+  // El aviso va acá y no sólo en el listado porque es acá donde se decide: al
+  // marcar quince cosas para un taller uno lee el nombre del equipo, no la
+  // columna de la derecha. Esto aparece con el pedido ya armado, un segundo
+  // antes de enviarlo.
+  const cruces =
+    desde && hasta
+      ? elegidos.flatMap((e) =>
+          (pendientes[e.id] ?? [])
+            .filter((p) => p.desde <= hasta && p.hasta >= desde)
+            .map((p) => ({ equipo: e.nombre, ...p })),
+        )
+      : [];
 
   // Al enviarse con éxito el carro se vacía, pero recién cuando la persona
   // cierra el aviso: si se limpiara antes, la barra desaparecería con el modal
@@ -165,6 +197,32 @@ export function BarraPedido() {
 
             {estado.mensaje && <Aviso tono="error">{estado.mensaje}</Aviso>}
 
+            {/* No frena el envío: pedir lo mismo que otro está permitido y lo
+                resuelve quien lleva los equipos. Lo que hace es que la persona
+                se entere ahora y no cuando le rechacen media solicitud. */}
+            {cruces.length > 0 && (
+              <Aviso
+                tono="atencion"
+                titulo={
+                  cruces.length === 1
+                    ? "Un equipo de tu pedido ya lo pidió alguien"
+                    : `${cruces.length} equipos de tu pedido ya los pidió alguien`
+                }
+              >
+                <ul className="mt-1 space-y-0.5">
+                  {cruces.map((c, i) => (
+                    <li key={i}>
+                      <span className="font-medium">{c.equipo}</span>:{" "}
+                      {c.mio ? "ya lo pediste tú" : c.quien} para el{" "}
+                      {formatearFecha(c.desde)} → {formatearFecha(c.hasta)}
+                    </li>
+                  ))}
+                </ul>
+                Puedes mandarlo igual —decide quien lleva los equipos— o cambiar
+                las fechas y que no se topen.
+              </Aviso>
+            )}
+
             <div>
               <p className="text-sm font-medium text-stone-900">
                 {cuantos === 1 ? "Pides 1 equipo" : `Pides ${cuantos} equipos`}
@@ -204,7 +262,8 @@ export function BarraPedido() {
                   name="fechaDesde"
                   type="date"
                   min={hoyISO()}
-                  defaultValue={estado.valores?.fechaDesde ?? hoyISO()}
+                  value={desde}
+                  onChange={(e) => setDesde(e.target.value)}
                   required
                 />
               </Campo>
@@ -219,8 +278,9 @@ export function BarraPedido() {
                   id="fechaHasta"
                   name="fechaHasta"
                   type="date"
-                  min={hoyISO()}
-                  defaultValue={estado.valores?.fechaHasta}
+                  min={desde || hoyISO()}
+                  value={hasta}
+                  onChange={(e) => setHasta(e.target.value)}
                   required
                 />
               </Campo>
