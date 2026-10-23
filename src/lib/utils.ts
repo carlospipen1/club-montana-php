@@ -157,3 +157,51 @@ export function listarEnEspanol(partes: string[]): string {
   if (partes.length <= 1) return partes[0] ?? "";
   return `${partes.slice(0, -1).join(", ")} y ${partes[partes.length - 1]}`;
 }
+
+/** Cuánto se desvía Chile de UTC en un instante dado, en milisegundos. */
+function desfaseChile(instante: Date): number {
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: ZONA,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(instante);
+
+  const p = Object.fromEntries(partes.map((x) => [x.type, x.value]));
+  const comoSiFueraUTC = Date.UTC(
+    Number(p.year),
+    Number(p.month) - 1,
+    Number(p.day),
+    Number(p.hour) % 24,
+    Number(p.minute),
+    Number(p.second),
+  );
+
+  return comoSiFueraUTC - instante.getTime();
+}
+
+/**
+ * Convierte lo que escribe un `<input type="datetime-local">` al instante real.
+ *
+ * El campo entrega un reloj de pared —"2026-10-09T20:00"— sin zona horaria, y
+ * `new Date()` lo interpreta en la zona del servidor. En Vercel eso es UTC, así
+ * que una salida a las 20:00 quedaba guardada como las 17:00 de Chile. Quien
+ * escribe la hora está pensando en la hora de acá, siempre.
+ *
+ * Vive en `utils` y no junto a las reuniones —donde se escribió primero—
+ * porque el problema no era de las reuniones: es de cualquier formulario con
+ * fecha y hora. Las salidas lo arrastraron meses por tenerlo a mano y no verlo.
+ *
+ * Es el inverso exacto de `paraInputFechaHora`: lo que una escribe, la otra lo
+ * lee de vuelta igual.
+ */
+export function desdeHoraChile(valor: string): Date {
+  const tentativo = new Date(`${valor}Z`);
+  if (Number.isNaN(tentativo.getTime())) return tentativo;
+
+  return new Date(tentativo.getTime() - desfaseChile(tentativo));
+}

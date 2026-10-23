@@ -9,7 +9,8 @@ import { db } from "@/db";
 import { asistencias, reuniones, usuarios } from "@/db/schema";
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
 import { notificarATodos } from "@/lib/notificar";
-import { desdeHoraChile, formatearCuando } from "@/lib/reuniones";
+import { formatearCuando } from "@/lib/reuniones";
+import { desdeHoraChile } from "@/lib/utils";
 import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
 
 const esquemaReunion = z.object({

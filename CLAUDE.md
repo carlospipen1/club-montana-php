@@ -141,6 +141,31 @@ recién entonces borra las columnas viejas y pone los `NOT NULL`. Así fue el pa
 de préstamos sueltos a solicitudes (0008 y 0009), y el relleno del medio no lo
 escribe `drizzle-kit`: sin él, el `NOT NULL` de la segunda falla.
 
+### Un `datetime-local` no trae zona horaria
+
+El campo entrega un reloj de pared —"2026-10-09T20:00"— y `new Date()` lo
+interpreta en la zona del **servidor**. En Vercel eso es UTC, así que una salida
+a las 20:00 se guardaba como las 17:00 de Chile: la persona cambiaba la hora,
+el sistema decía "guardado", y al reabrir aparecía otra. En local no se nota,
+porque el equipo está en hora de Chile.
+
+Para eso está `desdeHoraChile()` en `src/lib/utils.ts`, que es el inverso exacto
+de `paraInputFechaHora()`. **Cualquier formulario con fecha y hora tiene que
+usarla.** Las reuniones la tenían desde el principio; las salidas no, y
+arrastraron el error meses.
+
+### Las listas largas filtran y paginan en el navegador
+
+`src/components/panel/lista-filtrable.tsx`: socios y equipos traen todas las
+filas y el navegador se encarga de buscar y paginar. Las dos cosas van juntas a
+propósito —si el filtro fuera del navegador y la paginación del servidor,
+buscar sólo encontraría lo que cayó en la página actual—. Además, en equipos la
+recarga de un formulario `?q=` se llevaba por delante lo que la persona llevaba
+marcado para pedir.
+
+Aguanta cientos de filas, no miles. Si el club creciera de verdad, hay que mover
+las dos cosas al servidor a la vez.
+
 ### Archivos `"use server"`
 
 Sólo pueden exportar funciones `async`. Exportar una constante rompe el módulo

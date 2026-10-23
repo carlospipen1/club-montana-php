@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { inscripciones, salidas } from "@/db/schema";
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
 import { notificarA, notificarATodos } from "@/lib/notificar";
+import { desdeHoraChile } from "@/lib/utils";
 import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
 
 const esquemaSalida = z
@@ -27,7 +28,10 @@ const esquemaSalida = z
       .max(500, "Ese cupo parece un error."),
     equipoRequerido: z.string().trim().optional(),
   })
-  .refine((d) => new Date(d.fechaLimiteInscripcion) <= new Date(d.fechaSalida), {
+  // Las dos se comparan como hora de Chile: comparar un reloj de pared con
+  // otro da lo mismo en cualquier zona, pero hacerlo con la misma función que
+  // graba evita que validación y escritura discrepen.
+  .refine((d) => desdeHoraChile(d.fechaLimiteInscripcion) <= desdeHoraChile(d.fechaSalida), {
     message: "El cierre de inscripciones debe ser antes o el mismo día de la salida.",
     path: ["fechaLimiteInscripcion"],
   });
@@ -49,8 +53,8 @@ export async function accionCrearSalida(
       nombre: d.nombre,
       descripcion: d.descripcion || null,
       lugar: d.lugar || null,
-      fechaSalida: new Date(d.fechaSalida),
-      fechaLimiteInscripcion: new Date(d.fechaLimiteInscripcion),
+      fechaSalida: desdeHoraChile(d.fechaSalida),
+      fechaLimiteInscripcion: desdeHoraChile(d.fechaLimiteInscripcion),
       nivelDificultad: d.nivelDificultad,
       cupoMaximo: d.cupoMaximo,
       equipoRequerido: d.equipoRequerido || null,
@@ -94,8 +98,8 @@ export async function accionActualizarSalida(
       nombre: d.nombre,
       descripcion: d.descripcion || null,
       lugar: d.lugar || null,
-      fechaSalida: new Date(d.fechaSalida),
-      fechaLimiteInscripcion: new Date(d.fechaLimiteInscripcion),
+      fechaSalida: desdeHoraChile(d.fechaSalida),
+      fechaLimiteInscripcion: desdeHoraChile(d.fechaLimiteInscripcion),
       nivelDificultad: d.nivelDificultad,
       cupoMaximo: d.cupoMaximo,
       equipoRequerido: d.equipoRequerido || null,
