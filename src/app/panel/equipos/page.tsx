@@ -22,11 +22,12 @@ import { CabeceraPagina, Tarjeta, Vacio } from "@/components/ui/superficie";
 import { EditarEquipo, NuevoEquipo } from "./formularios";
 import { BarraPedido, CasillaEquipo, ProveedorPedido } from "./pedido";
 import {
-  BuscadorEquipos,
-  FilaFiltrable,
-  ProveedorFiltro,
+  BuscadorLista,
+  FilaLista,
+  Paginador,
+  ProveedorLista,
   SinCoincidencias,
-} from "./filtro";
+} from "@/components/panel/lista-filtrable";
 
 export const metadata = { title: "Equipos" };
 
@@ -34,9 +35,9 @@ export default async function PaginaEquipos() {
   const usuario = await requerirUsuario();
   const puedeGestionar = puede(usuario.rol, "gestionarEquipos");
 
-  // El inventario entero, sin filtrar en la consulta: la búsqueda ocurre en el
-  // navegador (ver `filtro.tsx`), porque recargar la página para buscar borraba
-  // lo que la persona llevaba marcado.
+  // El inventario entero, sin filtrar en la consulta: la búsqueda y la
+  // paginación ocurren en el navegador —ver `lista-filtrable.tsx`—, porque
+  // recargar la página para buscar borraba lo que la persona llevaba marcado.
   const lista = await db
     .select()
     .from(equipos)
@@ -83,7 +84,7 @@ export default async function PaginaEquipos() {
 
   return (
     <ProveedorPedido>
-      <ProveedorFiltro filas={buscables}>
+      <ProveedorLista filas={buscables} porPagina={25}>
         <CabeceraPagina
           titulo="Equipos del club"
           descripcion={`${libresHoy} libre(s) hoy de ${lista.length} en inventario. Marca lo que necesites y pídelo todo junto: lo que está prestado también se puede pedir para después.`}
@@ -99,7 +100,10 @@ export default async function PaginaEquipos() {
 
         <Tarjeta>
           <div className="border-b border-stone-200 px-5 py-3">
-            <BuscadorEquipos />
+            <BuscadorLista
+              marcador="Buscar por nombre, categoría o descripción…"
+              nota="Lo que ya marcaste sigue en tu pedido aunque no se vea acá."
+            />
           </div>
 
           {lista.length === 0 ? (
@@ -127,7 +131,7 @@ export default async function PaginaEquipos() {
               </TablaCabecera>
               <TablaCuerpo>
                 {lista.map((equipo) => (
-                  <FilaFiltrable key={equipo.id} id={equipo.id}>
+                  <FilaLista key={equipo.id} id={equipo.id}>
                     <Fila>
                       <Td>
                         {/* Lo único que impide marcar un equipo es la mantención.
@@ -183,7 +187,7 @@ export default async function PaginaEquipos() {
                         </Td>
                       )}
                     </Fila>
-                  </FilaFiltrable>
+                  </FilaLista>
                 ))}
               </TablaCuerpo>
             </Tabla>
@@ -196,10 +200,11 @@ export default async function PaginaEquipos() {
               descripcion="Ningún equipo coincide con lo que escribiste. Prueba con menos palabras."
             />
           </SinCoincidencias>
+          <Paginador nombre="equipos" />
         </Tarjeta>
 
         <BarraPedido />
-      </ProveedorFiltro>
+      </ProveedorLista>
     </ProveedorPedido>
   );
 }

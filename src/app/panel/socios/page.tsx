@@ -1,13 +1,19 @@
-import { asc, ilike, or, sql } from "drizzle-orm";
-import { Search, Users } from "lucide-react";
+import { asc } from "drizzle-orm";
+import { Users } from "lucide-react";
 
 import { db } from "@/db";
 import { usuarios } from "@/db/schema";
 import { requerirCapacidad } from "@/lib/auth";
 import { ETIQUETAS_ROL, puede } from "@/lib/permisos";
+import {
+  BuscadorLista,
+  FilaLista,
+  Paginador,
+  ProveedorLista,
+  SinCoincidencias,
+} from "@/components/panel/lista-filtrable";
 import { calcularEdad, formatearFecha } from "@/lib/utils";
 import { Boton } from "@/components/ui/boton";
-import { Input } from "@/components/ui/campos";
 import {
   Fila,
   Insignia,
@@ -23,33 +29,23 @@ import { EditarSocio, NuevoSocio, ResetearPassword } from "./formularios";
 
 export const metadata = { title: "Socios" };
 
-export default async function PaginaSocios({
-  searchParams,
-}: PageProps<"/panel/socios">) {
+export default async function PaginaSocios() {
   const usuario = await requerirCapacidad("verSocios");
   const puedeGestionar = puede(usuario.rol, "gestionarSocios");
 
-  const { q } = await searchParams;
-  const busqueda = typeof q === "string" ? q.trim() : "";
-  const patron = `%${busqueda}%`;
-
+  // El registro entero: buscar y paginar ocurren en el navegador, así que la
+  // lista filtra mientras se escribe en vez de recargar con `?q=`.
   const lista = await db
     .select()
     .from(usuarios)
-    .where(
-      busqueda
-        ? or(
-            ilike(usuarios.nombres, patron),
-            ilike(usuarios.apellidos, patron),
-            ilike(usuarios.email, patron),
-            ilike(usuarios.rut, patron),
-            ilike(sql`${usuarios.nombres} || ' ' || ${usuarios.apellidos}`, patron),
-          )
-        : undefined,
-    )
     .orderBy(asc(usuarios.apellidos), asc(usuarios.nombres));
 
   const activos = lista.filter((s) => s.estado === "activo").length;
+
+  const buscables = lista.map((s) => ({
+    id: s.id,
+    texto: `${s.nombres} ${s.apellidos} ${s.email} ${s.rut ?? ""} ${ETIQUETAS_ROL[s.rol]}`,
+  }));
 
   return (
     <>
@@ -60,39 +56,19 @@ export default async function PaginaSocios({
         {puedeGestionar && <NuevoSocio />}
       </CabeceraPagina>
 
-      <Tarjeta>
-        <div className="border-b border-stone-200 px-5 py-3">
-          <form className="flex gap-2">
-            <div className="relative flex-1">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400"
-                aria-hidden
-              />
-              <Input
-                name="q"
-                defaultValue={busqueda}
-                placeholder="Buscar por nombre, correo o RUT…"
-                className="pl-9"
-                aria-label="Buscar socios"
-              />
-            </div>
-            <Boton type="submit" variante="outline">
-              Buscar
-            </Boton>
-          </form>
-        </div>
+      <ProveedorLista filas={buscables} porPagina={25}>
+        <Tarjeta>
+          <div className="border-b border-stone-200 px-5 py-3">
+            <BuscadorLista marcador="Buscar por nombre, correo, RUT o rol…" />
+          </div>
 
-        {lista.length === 0 ? (
-          <Vacio
-            icono={<Users aria-hidden />}
-            titulo={busqueda ? "Sin resultados" : "Todavía no hay socios"}
-            descripcion={
-              busqueda
-                ? `Ningún socio coincide con "${busqueda}".`
-                : "Registra al primer socio para empezar."
-            }
-          />
-        ) : (
+          {lista.length === 0 ? (
+            <Vacio
+              icono={<Users aria-hidden />}
+              titulo="Todavía no hay socios"
+              descripcion="Registra al primer socio para empezar."
+            />
+          ) : (
           <Tabla>
             <TablaCabecera>
               <tr>
@@ -108,7 +84,8 @@ export default async function PaginaSocios({
             </TablaCabecera>
             <TablaCuerpo>
               {lista.map((socio) => (
-                <Fila key={socio.id}>
+                <FilaLista key={socio.id} id={socio.id}>
+                  <Fila>
                   <Td>
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
@@ -170,12 +147,24 @@ export default async function PaginaSocios({
                       </div>
                     </Td>
                   )}
-                </Fila>
+                  </Fila>
+                </FilaLista>
               ))}
             </TablaCuerpo>
           </Tabla>
-        )}
-      </Tarjeta>
+          )}
+
+          <SinCoincidencias>
+            <Vacio
+              icono={<Users aria-hidden />}
+              titulo="Sin resultados"
+              descripcion="Ningún socio coincide con lo que escribiste."
+            />
+          </SinCoincidencias>
+
+          <Paginador nombre="socios" />
+        </Tarjeta>
+      </ProveedorLista>
     </>
   );
 }
