@@ -5,6 +5,7 @@ import {
   accionCambiarEstadoSalida,
   accionDesinscribirse,
   accionMarcarAsistencia,
+  accionQuitarInscripcion,
 } from "@/actions/salidas";
 import { db } from "@/db";
 import { fichasSocio, inscripciones, salidas, usuarios } from "@/db/schema";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/datos";
 import { CabeceraPagina, Tarjeta, Vacio } from "@/components/ui/superficie";
 import { EditarSalida, Inscribirse, NuevaSalida } from "./formularios";
+import { InscribirSocio } from "./inscribir";
 
 export const metadata = { title: "Salidas" };
 
@@ -62,6 +64,8 @@ export default async function PaginaSalidas() {
         .select({
           inscripcionId: inscripciones.id,
           salidaId: inscripciones.salidaId,
+          // Para saber a quién ya no ofrecer en el desplegable de inscribir.
+          usuarioId: inscripciones.usuarioId,
           asistio: inscripciones.asistio,
           nombres: usuarios.nombres,
           apellidos: usuarios.apellidos,
@@ -77,6 +81,15 @@ export default async function PaginaSalidas() {
         .innerJoin(usuarios, eq(inscripciones.usuarioId, usuarios.id))
         .leftJoin(fichasSocio, eq(fichasSocio.usuarioId, usuarios.id))
         .orderBy(asc(usuarios.apellidos))
+    : [];
+
+  // Socios activos, para el desplegable de a quién se puede agregar a mano.
+  const sociosActivos = puedeGestionar
+    ? await db
+        .select({ id: usuarios.id, nombres: usuarios.nombres, apellidos: usuarios.apellidos })
+        .from(usuarios)
+        .where(eq(usuarios.estado, "activo"))
+        .orderBy(asc(usuarios.apellidos), asc(usuarios.nombres))
     : [];
 
   const porSalida = new Map<number, typeof participantes>();
@@ -298,10 +311,40 @@ export default async function PaginaSalidas() {
                           {p.asistio ? "Asistió" : "Marcar asistencia"}
                         </Boton>
                       </form>
+
+                      {/* Si la directiva arma la nómina a mano, también tiene
+                          que poder corregirla cuando alguien avisa que no va. */}
+                      <ConfirmarEnvio
+                        mensaje={`¿Bajar a ${p.nombres} ${p.apellidos} de "${salida.nombre}"?`}
+                      >
+                        <form action={accionQuitarInscripcion}>
+                          <input
+                            type="hidden"
+                            name="inscripcionId"
+                            value={p.inscripcionId}
+                          />
+                          <Boton
+                            type="submit"
+                            variante="ghost"
+                            tamano="sm"
+                            className="h-7 text-xs text-red-700 hover:bg-red-50"
+                            aria-label={`Bajar a ${p.nombres} ${p.apellidos}`}
+                          >
+                            Bajar
+                          </Boton>
+                        </form>
+                      </ConfirmarEnvio>
                     </li>
                   ))}
                 </ul>
               )}
+
+              <InscribirSocio
+                salidaId={salida.id}
+                candidatos={sociosActivos
+                  .filter((s) => !lista_.some((p) => p.usuarioId === s.id))
+                  .map((s) => ({ id: s.id, nombre: `${s.apellidos}, ${s.nombres}` }))}
+              />
             </details>
           </div>
         )}

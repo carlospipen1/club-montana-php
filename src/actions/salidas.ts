@@ -5,11 +5,17 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db";
-import { inscripciones, salidas } from "@/db/schema";
+import { inscripciones, salidas, usuarios } from "@/db/schema";
 import { requerirCapacidad, requerirUsuario } from "@/lib/auth";
 import { notificarA, notificarATodos } from "@/lib/notificar";
 import { desdeHoraChile } from "@/lib/utils";
-import { errorDeValidacion, exito, fallo, type EstadoFormulario } from "./tipos";
+import {
+  errorDeValidacion,
+  exito,
+  fallo,
+  falloDeCampo,
+  type EstadoFormulario,
+} from "./tipos";
 
 const esquemaSalida = z
   .object({
@@ -254,4 +260,122 @@ export async function accionMarcarAsistencia(formData: FormData) {
     .where(eq(inscripciones.id, inscripcionId));
 
   revalidatePath("/panel/salidas");
+}
+
+/**
+ * Inscribir a otro socio, sin que él tenga que entrar al sistema.
+ *
+ * El club confirma por WhatsApp y mucha gente nunca abre el panel. Hasta ahora
+ * eso dejaba la nómina incompleta justo cuando hace falta: el viernes en la
+ * noche, cuando hay que imprimirla para Carabineros. Quien dirige la salida
+ * anota a los que confirmaron y la lista queda real.
+ *
+ * A diferencia de inscribirse uno mismo, acá **no corre la fecha límite**: el
+ * plazo existe para que los socios se organicen, no para impedirle a quien
+ * dirige registrar a alguien que ya confirmó.
+ */
+export async function accionInscribirSocio(
+  _estado: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const autor = await requerirCapacidad("gestionarSalidas");
+
+  const salidaId = Number(formData.get("salidaId"));
+  const usuarioId = Number(formData.get("usuarioId"));
+  if (!Number.isInteger(salidaId)) return fallo("Salida no válida.", formData);
+  if (!Number.isInteger(usuarioId)) {
+    return falloDeCampo({ usuarioId: ["Elige a quién inscribir."] }, formData);
+  }
+
+  const [salida] = await db
+    .select()
+    .from(salidas)
+    .where(eq(salidas.id, salidaId))
+    .limit(1);
+
+  if (!salida) return fallo("La salida no existe.", formData);
+  // Lo único que se niega es una salida cancelada: ahí no va nadie. En una ya
+  // realizada sí tiene sentido, para dejar el registro de quién fue.
+  if (salida.estado === "cancelada") {
+    return fallo("Esta salida está cancelada.", formData);
+  }
+
+  const [socio] = await db
+    .select({ nombres: usuarios.nombres, apellidos: usuarios.apellidos, estado: usuarios.estado })
+    .from(usuarios)
+    .where(eq(usuarios.id, usuarioId))
+    .limit(1);
+
+  if (!socio) return fallo("Ese socio no existe.", formData);
+  if (socio.estado !== "activo") {
+    return fallo(`${socio.nombres} ${socio.apellidos} está desactivado.`, formData);
+  }
+
+  try {
+    const resultado = await db.transaction(async (tx) => {
+      const [{ total }] = await tx
+        .select({ total: count() })
+        .from(inscripciones)
+        .where(eq(inscripciones.salidaId, salidaId));
+
+      if (total >= salida.cupoMaximo) return "sin-cupo" as const;
+
+      await tx.insert(inscripciones).values({
+        salidaId,
+        usuarioId,
+        // Queda el rastro de que no se inscribió solo. Sirve al revisar la
+        // lista: no es lo mismo quien se anotó que quien fue anotado.
+        observaciones: `Inscrito por ${autor.nombres} ${autor.apellidos}`,
+      });
+      return "ok" as const;
+    });
+
+    if (resultado === "sin-cupo") {
+      return fallo(
+        `La salida llegó a su cupo de ${salida.cupoMaximo}. Si de verdad va a ir, sube el cupo desde Editar y vuelve a intentarlo.`,
+        formData,
+      );
+    }
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : String(error);
+    if (mensaje.includes("duplicate key")) {
+      return fallo(`${socio.nombres} ya estaba inscrito.`, formData);
+    }
+    throw error;
+  }
+
+  // El socio tiene que enterarse de que está en la lista: puede haber dicho
+  // que sí en el grupo y no acordarse, o haber cambiado de opinión.
+  await notificarA(usuarioId, {
+    tipo: "salida",
+    titulo: "Te inscribieron en una salida",
+    mensaje: `${autor.nombres} te inscribió en "${salida.nombre}". Si no puedes ir, avísale.`,
+    enlace: `/panel/salidas#salida-${salidaId}`,
+  });
+
+  revalidarSalidas();
+  return exito(`${socio.nombres} ${socio.apellidos} quedó en la lista.`);
+}
+
+/**
+ * Bajar a alguien de la lista, cuando avisa que no va.
+ *
+ * Va junto con poder inscribir: si la directiva arma la nómina a mano, también
+ * tiene que poder corregirla cuando alguien se cae a última hora.
+ */
+export async function accionQuitarInscripcion(formData: FormData) {
+  await requerirCapacidad("gestionarSalidas");
+
+  const inscripcionId = Number(formData.get("inscripcionId"));
+  if (!Number.isInteger(inscripcionId)) return;
+
+  await db.delete(inscripciones).where(eq(inscripciones.id, inscripcionId));
+
+  revalidarSalidas();
+}
+
+function revalidarSalidas() {
+  revalidatePath("/panel/salidas");
+  revalidatePath("/panel");
+  revalidatePath("/panel/mi-actividad");
 }
